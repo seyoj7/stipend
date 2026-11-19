@@ -1,0 +1,25 @@
+.invoice-alert { margin: -7px 0 17px; }
+.invoice-layout { display: grid; grid-template-columns: 1.2fr .8fr; gap: 15px; }
+.invoice-create-card { padding: 20px; }
+.invoice-card-top { display: flex; align-items: center; gap: 10px; }
+.invoice-card-top .section-label { margin: 0 0 4px; }.invoice-card-top p { margin: 0; }
+.invoice-illustration { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: #e7f4ec; color: var(--green); font-size: 20px; }
+.invoice-agent-target { display: grid; gap: 7px; margin-top: 21px; padding: 11px; border: 1px solid #e7ede8; border-radius: 9px; background: #fbfcfb; }
+.invoice-agent-target span { color: #92a097; font: 8px "DM Mono",monospace; letter-spacing: .7px; }
+.invoice-agent-target code { overflow: hidden; color: #53665b; font-size: 9px; text-overflow: ellipsis; }
+.invoice-amount-field { margin-top: 17px; }.invoice-amount-field .field { margin-top: 2px; }.invoice-amount-field small { color: #9aa69f; font-size: 9px; }
+.invoice-merchant-note { display: flex; gap: 9px; margin: 17px 0; padding: 10px; border-radius: 9px; background: #f5f8f5; color: #85938b; }
+.invoice-merchant-note > span { color: var(--green); }.invoice-merchant-note p { margin: 0; font-size: 9px; line-height: 1.7; }.invoice-merchant-note b { color: #596a60; font: 9px "DM Mono",monospace; overflow-wrap: anywhere; }
+.invoice-submit { width: 100%; justify-content: space-between; }
+.invoice-help { margin-top: 9px; color: #93a097; font-size: 9px; }.invoice-help.warn { color: var(--gold); }
+.invoice-side-info { padding: 20px; background: #f4f8f3; }
+.invoice-side-info .eyebrow { margin: 0 0 10px; }.invoice-side-info h2 { margin: 0 0 8px; font-size: 19px; letter-spacing: -.7px; }.invoice-side-info > p { margin: 0 0 17px; color: #7d8c82; font-size: 10px; line-height: 1.7; }
+.invoice-guard { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid #e2ebe3; }
+.invoice-guard > span { color: #8aac95; font: 9px "DM Mono",monospace; }
+.invoice-guard div { display: grid; gap: 4px; }.invoice-guard b { color: #43584a; font-size: 10px; }.invoice-guard small { color: #8b998f; font-size: 9px; }
+.invoice-guard i { display: grid; place-items: center; width: 18px; height: 18px; margin-left: auto; border-radius: 50%; background: #e0f2e7; color: #248255; font-size: 10px; font-style: normal; }
+.invoice-list-section { margin-top: 28px; }.invoice-list-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 12px; }.invoice-list-heading h2 { margin: 0 0 4px; font-size: 16px; letter-spacing: -.4px; }.invoice-list-heading p { margin: 0; color: #8a9890; font-size: 10px; }
+.invoice-filters { display: flex; align-items: center; gap: 5px; }.invoice-filters button,.invoice-filters .selected { height: 29px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #829087; font-size: 9px; font-weight: 700; }.invoice-filters .selected { display: inline-flex; align-items: center; border-color: #d6e9dd; background: #e9f5ed; color: #337553; }.invoice-filters button { cursor: pointer; }.invoice-filters button.refresh-button { margin-left: 4px; border-color: var(--line); background: #fff; color: #63746a; }
+.invoice-table-card { padding: 5px 10px; }.invoice-id { color: #52675a; font: 10px "DM Mono",monospace; }.data-table td small { display: block; margin-top: 4px; color: #a0aaa4; font-size: 8px; }.invoice-merchant-cell { display: inline-block; max-width: 155px; overflow: hidden; color: #66766d; font: 9px "DM Mono",monospace; text-overflow: ellipsis; vertical-align: middle; }.invoice-recipient { color: #718078; font: 9px "DM Mono",monospace; }
+@media(max-width:850px) { .invoice-layout { grid-template-columns: 1fr; }.invoice-side-info { display: grid; grid-template-columns: 1fr 1fr; column-gap: 17px; }.invoice-side-info .eyebrow,.invoice-side-info h2,.invoice-side-info > p { grid-column: 1 / -1; }.invoice-guard:nth-of-type(odd) { border-top: 1px solid #e2ebe3; } }
+@media(max-width:680px) { .invoice-side-info { display: block; }.invoice-list-heading { align-items: flex-start; flex-direction: column; }.invoice-filters { width: 100%; }.invoice-filters .refresh-button { margin-left: auto; } }

@@ -1,0 +1,30 @@
+{
+  "C:\\Users\\joyes\\Programs\\stipend\\contract\\contracts\\MockUSD8.sol": {
+    "jobHash": "solc-0_8_34-08242dd043041f28f2a135699cd26f4d5a5e552f",
+    "isolated": true,
+    "compilerType": "solc",
+    "artifactPaths": [
+      "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts\\contracts\\MockUSD8.sol\\MockUSD8.json"
+    ],
+    "buildInfoPath": "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts\\build-info\\solc-0_8_34-08242dd043041f28f2a135699cd26f4d5a5e552f.json",
+    "buildInfoOutputPath": "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts\\build-info\\solc-0_8_34-08242dd043041f28f2a135699cd26f4d5a5e552f.output.json",
+    "typeFilePath": "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts\\contracts\\MockUSD8.sol\\artifacts.d.ts",
+    "wasm": false,
+    "artifactsDirectory": "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts",
+    "emitsTypeDeclarations": true
+  },
+  "C:\\Users\\joyes\\Programs\\stipend\\contract\\contracts\\stipend.sol": {
+    "jobHash": "solc-0_8_34-da5c4b3550093f6cc86ae229ddbbd08816050e1e",
+    "isolated": true,
+    "compilerType": "solc",
+    "artifactPaths": [
+      "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts\\contracts\\stipend.sol\\Stipend.json"
+    ],
+    "buildInfoPath": "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts\\build-info\\solc-0_8_34-da5c4b3550093f6cc86ae229ddbbd08816050e1e.json",
+    "buildInfoOutputPath": "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts\\build-info\\solc-0_8_34-da5c4b3550093f6cc86ae229ddbbd08816050e1e.output.json",
+    "typeFilePath": "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts\\contracts\\stipend.sol\\artifacts.d.ts",
+    "wasm": false,
+    "artifactsDirectory": "C:\\Users\\joyes\\Programs\\stipend\\contract\\artifacts",
+    "emitsTypeDeclarations": true
+  }
+}

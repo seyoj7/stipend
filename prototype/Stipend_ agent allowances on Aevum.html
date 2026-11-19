@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stipend: agent allowances on Aevum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;700&display=swap">
+<style>
+:root{--bg:#f2f6f8;--sf:#fff;--ink:#0d1b2a;--mute:#566679;--line:#d8e0e8;--ac:#0a8f63;--acink:#fff;--acsoft:#e0f4ec;--warn:#a96a00;--bad:#c0392b;--badsoft:#fbe9e6;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a1626;--sf:#112238;--ink:#e8eef5;--mute:#8fa3b8;--line:#223a56;--ac:#2fd39a;--acink:#04231a;--acsoft:#10392f;--warn:#f0b24a;--bad:#ff7a6b;--badsoft:#3b1f27;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0a1626;--sf:#112238;--ink:#e8eef5;--mute:#8fa3b8;--line:#223a56;--ac:#2fd39a;--acink:#04231a;--acsoft:#10392f;--warn:#f0b24a;--bad:#ff7a6b;--badsoft:#3b1f27;color-scheme:dark}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0;line-height:1.1;letter-spacing:-.02em}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+nav.side{padding:24px 16px;border-right:1px solid var(--line);position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;gap:6px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;margin:0 8px 20px;text-decoration:none;color:var(--ink)}
+nav a.l{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:var(--mute);text-decoration:none;font-weight:500}
+nav a.l:hover{color:var(--ink)}
+nav a.l[aria-current="page"]{background:var(--acsoft);color:var(--ink)}
+main{padding:20px clamp(16px,4vw,48px) 60px;max-width:1080px;width:100%}
+.top{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:28px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:99px;background:var(--sf);font-size:14px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ac)}
+.btn{border:1px solid var(--line);background:var(--sf);padding:9px 16px;border-radius:10px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--mute)}
+.btn.p{background:var(--ac);color:var(--acink);border-color:var(--ac)}
+.btn.d{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--sf);border:1px solid var(--line);border-radius:16px;padding:20px}
+.grid{display:grid;gap:16px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+h1{font-size:clamp(32px,6vw,56px);font-weight:700}
+h2{font-size:26px;margin-bottom:6px}
+h3{font-size:17px;margin-bottom:10px}
+p.sub{color:var(--mute);margin:0 0 24px;max-width:60ch}
+.big{font-size:32px;font-weight:700}
+.mute{color:var(--mute);font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{display:grid;gap:4px;font-size:14px;color:var(--mute)}
+input,select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0;width:100%}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:top}
+th{color:var(--mute);font-weight:500;font-size:14px}
+.st{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px;font-weight:500;background:var(--acsoft);color:var(--ac)}
+.st.open{background:var(--bg);color:var(--mute);border:1px solid var(--line)}
+.st.blocked{background:var(--badsoft);color:var(--bad)}
+.why{display:block;color:var(--bad);font-size:13px;margin-top:2px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.tag{display:inline-flex;gap:6px;align-items:center;background:var(--acsoft);border-radius:99px;padding:4px 6px 4px 12px;font-size:14px}
+.tag button{border:0;background:none;cursor:pointer;color:var(--mute);font-size:16px;line-height:1}
+.ringwrap{display:grid;place-items:center;position:relative}
+.ringwrap .mid{position:absolute;text-align:center}
+.hero{padding:clamp(8px,4vw,40px) 0 32px}
+.hero p{font-size:19px;color:var(--mute);max-width:52ch;margin:18px 0 24px}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.steps li{border-top:3px solid var(--ac);padding-top:12px}
+.steps b{display:block;font-size:18px;margin-bottom:4px}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.log li{padding:10px 12px;border-radius:10px;background:var(--bg);font-size:15px}
+.log li.ok{border-left:3px solid var(--ac)}.log li.no{border-left:3px solid var(--bad)}
+.empty{padding:28px;text-align:center;color:var(--mute);border:1px dashed var(--line);border-radius:14px}
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;z-index:30;font-size:15px}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--sf);color:var(--ink);max-width:420px;padding:24px}
+dialog::backdrop{background:rgba(5,12,22,.6)}
+.demo{font-size:13px;color:var(--mute);margin-top:28px}
+@media (max-width:760px){
+.app{grid-template-columns:1fr}
+nav.side{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;flex-direction:row;justify-content:space-around;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));background:var(--sf);border-top:1px solid var(--line);border-right:0;z-index:20;overflow-x:auto}
+.brand{display:none}
+nav a.l{flex-direction:column;gap:2px;font-size:12px;padding:6px 8px}
+main{padding-bottom:110px}
+}
+@media (prefers-reduced-motion:no-preference){.ring{transition:stroke-dashoffset .6s ease}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav class="side" aria-label="Main">
+<a class="brand" href="#home"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="var(--line)" stroke-width="4"/><circle cx="16" cy="16" r="13" fill="none" stroke="var(--ac)" stroke-width="4" stroke-dasharray="52 82" stroke-linecap="round" transform="rotate(-90 16 16)"/><text x="16" y="21" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor">S</text></svg>Stipend</a>
+<a class="l" href="#dashboard" data-n="dashboard">Dashboard</a>
+<a class="l" href="#policy" data-n="policy">Rules</a>
+<a class="l" href="#invoices" data-n="invoices">Invoices</a>
+<a class="l" href="#agent" data-n="agent">Agent</a>
+<a class="l" href="#receipts" data-n="receipts">Receipts</a>
+</nav>
+<main>
+<div class="top">
+<span class="chip"><span class="dot"></span>Aevum Testnet, chain 44005</span>
+<span class="chip" id="wal">Not connected</span>
+<button class="btn" id="theme" aria-label="Switch light or dark theme">Theme</button>
+</div>
+<div id="view"></div>
+<p class="demo">This prototype runs on simulated data in your browser. The contract is not connected yet.</p>
+</main>
+</div>
+<dialog id="dlg"><h3>Revoke this agent?</h3><p class="mute">It will be blocked from paying any invoice right away. You can re-enable it by saving new rules.</p><div class="row" style="justify-content:flex-end"><button class="btn" data-a="cancel">Keep agent</button><button class="btn d" data-a="revokeok">Revoke agent</button></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+<script>
+const $=s=>document.querySelector(s),f=n=>Number(n).toFixed(2),esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hex=n=>[...Array(n)].map(()=>"0123456789abcdef"[Math.random()*16|0]).join("");
+const day=864e5;
+const S={conn:false,bal:500,spent:0,today:0,revoked:false,exp:Date.now()+7*day,
+pol:{budget:200,cap:50,daily:80,days:7,m:["Northwind Design","Pixel Print Co"]},
+inv:[{id:1,m:"Northwind Design",memo:"Logo refresh",amt:30,st:"open"},{id:2,m:"Pixel Print Co",memo:"Event posters",amt:75,st:"open"},{id:3,m:"Quick Cloud Hosting",memo:"Annual plan",amt:20,st:"open"}],
+rec:[],log:[],n:4,flt:"all"};
+const addr=n=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))>>>0;return"0x"+h.toString(16).padStart(8,"0").slice(0,4)+"…"+h.toString(16).slice(-4)};
+function toast(t){const e=$("#toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
+function days(){const d=Math.ceil((S.exp-Date.now())/day);return d}
+function check(i){const p=S.pol;
+if(S.revoked)return"Agent was revoked";
+if(Date.now()>S.exp)return"Permission expired";
+if(!p.m.includes(i.m))return"Merchant isn’t on the allowlist";
+if(i.amt>p.cap)return"Over the per-payment cap of "+f(p.cap);
+if(S.spent+i.amt>p.budget)return"Over the total budget of "+f(p.budget);
+if(S.today+i.amt>p.daily)return"Over the daily limit of "+f(p.daily);
+if(i.amt>S.bal)return"Vault balance is too low";
+return null}
+function run(){const todo=S.inv.filter(i=>i.st!=="paid");
+if(!todo.length){toast("No open invoices to pay");return}
+todo.forEach(i=>{const r=check(i);
+if(r){i.st="blocked";i.why=r;S.log.unshift({ok:0,t:"Blocked "+i.memo+" ("+f(i.amt)+" to "+i.m+"): "+r})}
+else{S.bal-=i.amt;S.spent+=i.amt;S.today+=i.amt;i.st="paid";i.why="";
+const tx="0x"+hex(64);S.rec.unshift({time:new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}),m:i.m,amt:i.amt,tx});
+S.log.unshift({ok:1,t:"Paid "+f(i.amt)+" tUSD8 to "+i.m+" for "+i.memo})}});
+toast("Agent run finished");render()}
+function ring(){const p=S.pol,u=Math.min(S.spent/p.budget,1),c=2*Math.PI*80,col=u>.8?"var(--warn)":"var(--ac)";
+return`<div class="ringwrap"><svg width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="${f(S.spent)} of ${f(p.budget)} spent"><circle cx="100" cy="100" r="80" fill="none" stroke="var(--line)" stroke-width="16"/><circle class="ring" cx="100" cy="100" r="80" fill="none" stroke="${col}" stroke-width="16" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-u)}" transform="rotate(-90 100 100)"/></svg><div class="mid"><div class="big">${f(p.budget-S.spent)}</div><div class="mute">tUSD8 left</div></div></div>`}
+function status(){return S.revoked?'<span class="st blocked">Revoked</span>':Date.now()>S.exp?'<span class="st blocked">Expired</span>':'<span class="st">Active</span>'}
+const V={
+home(){return`<section class="hero"><h1>Give your AI agent an allowance, not your wallet.</h1><p>Stipend lets an agent pay invoices on its own, but only inside the budget, merchants and dates you set. Revoke it any time.</p><div class="row"><button class="btn p" data-a="connect">Connect wallet</button><a class="btn" href="#dashboard" style="text-decoration:none">Try the demo</a></div></section>
+<ol class="steps"><li><b>Deposit tUSD8</b><span class="mute">Funds stay in the vault, under your control.</span></li><li><b>Set the rules</b><span class="mute">Total budget, per-payment cap, daily limit, expiry and approved merchants.</span></li><li><b>Let it pay</b><span class="mute">Every payment is checked against your rules and leaves a receipt.</span></li></ol>`},
+dashboard(){const p=S.pol;return`<h2>Dashboard</h2><p class="sub">Your agent’s allowance at a glance.</p>
+<div class="grid g2"><div class="card row" style="justify-content:space-around">${ring()}<div><div class="mute">Agent status</div>${status()}<p class="mute">Spent ${f(S.spent)} of ${f(p.budget)}</p><button class="btn d" data-a="revoke" ${S.revoked?"disabled":""}>Revoke agent</button></div></div>
+<div class="grid"><div class="card"><div class="mute">Vault balance</div><div class="big">${f(S.bal)}</div><span class="mute">tUSD8</span></div>
+<div class="card"><div class="mute">Used today</div><div class="big">${f(S.today)} / ${f(p.daily)}</div></div>
+<div class="card"><div class="mute">Permission ends</div><div class="big">${S.revoked?"Revoked":days()<=0?"Expired":days()+" days"}</div></div></div></div>
+<div class="card" style="margin-top:16px"><h3>Recent activity</h3>${S.log.length?`<ul class="log">${S.log.slice(0,4).map(l=>`<li class="${l.ok?"ok":"no"}">${esc(l.t)}</li>`).join("")}</ul>`:'<div class="empty">Nothing yet. Open the Agent page and run it.</div>'}</div>`},
+policy(){const p=S.pol;return`<h2>Rules</h2><p class="sub">The agent can only spend inside these limits.</p>
+<div class="card"><form id="pf" class="form" onsubmit="return false">
+<label>Total budget<input name="budget" type="number" min="1" step="0.01" value="${p.budget}"></label>
+<label>Per-payment cap<input name="cap" type="number" min="1" step="0.01" value="${p.cap}"></label>
+<label>Daily limit<input name="daily" type="number" min="1" step="0.01" value="${p.daily}"></label>
+<label>Valid for (days)<input name="days" type="number" min="1" value="${p.days}"></label></form>
+<h3 style="margin-top:18px">Approved merchants</h3><div class="tags">${p.m.map(m=>`<span class="tag">${esc(m)}<button data-a="rm" data-v="${esc(m)}" aria-label="Remove ${esc(m)}">×</button></span>`).join("")||'<span class="mute">No merchants yet. The agent can’t pay anyone.</span>'}</div>
+<div class="row"><input id="nm" placeholder="Merchant name" style="max-width:260px"><button class="btn" data-a="addm">Add merchant</button></div>
+<div class="row" style="margin-top:18px"><button class="btn p" data-a="save">Save rules</button></div></div>
+<div class="card" style="margin-top:16px"><h3>In plain words</h3><p style="margin:0">The agent can spend up to <b>${f(p.budget)}</b> tUSD8 in total, no more than <b>${f(p.cap)}</b> per payment and <b>${f(p.daily)}</b> per day, for <b>${p.days}</b> days, and only to ${p.m.length?p.m.map(esc).join(", "):"nobody"}.</p></div>
+<div class="card" style="margin-top:16px"><h3>Vault funds</h3><p class="mute">Balance: ${f(S.bal)} tUSD8</p><div class="row"><input id="amt" type="number" min="1" placeholder="Amount" style="max-width:180px"><button class="btn" data-a="dep">Deposit</button><button class="btn" data-a="wd">Withdraw</button></div></div>`},
+invoices(){const L=S.inv.filter(i=>S.flt==="all"||i.st===S.flt);return`<h2>Invoices</h2><p class="sub">Create invoices and see which ones the agent can pay.</p>
+<div class="card"><h3>New invoice</h3><form class="form" onsubmit="return false"><label>Merchant<input id="im" list="ml" placeholder="Merchant name"><datalist id="ml">${S.pol.m.map(m=>`<option value="${esc(m)}">`).join("")}</datalist></label><label>Amount (tUSD8)<input id="ia" type="number" min="1" step="0.01"></label><label>What it’s for<input id="id" placeholder="Short description"></label></form><div class="row" style="margin-top:12px"><button class="btn p" data-a="newinv">Create invoice</button></div></div>
+<div class="row" style="margin:18px 0 10px">${["all","open","paid","blocked"].map(x=>`<button class="btn ${S.flt===x?"p":""}" data-a="flt" data-v="${x}">${x[0].toUpperCase()+x.slice(1)}</button>`).join("")}</div>
+${L.length?`<div class="card tbl"><table><thead><tr><th>Merchant</th><th>For</th><th>Amount</th><th>Status</th></tr></thead><tbody>${L.map(i=>`<tr><td>${esc(i.m)}</td><td>${esc(i.memo)}</td><td>${f(i.amt)}</td><td><span class="st ${i.st}">${i.st[0].toUpperCase()+i.st.slice(1)}</span>${i.why?`<span class="why">${esc(i.why)}</span>`:""}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No invoices here. Create one above.</div>'}`},
+agent(){const open=S.inv.filter(i=>i.st!=="paid").length;return`<h2>Agent</h2><p class="sub">Run the agent and watch every decision it makes.</p>
+<div class="card row" style="justify-content:space-between"><div><div class="mute">Agent wallet</div><b>0xA9e1…7f20</b> ${status()}<div class="mute">${open} invoice${open===1?"":"s"} waiting</div></div><button class="btn p" data-a="run">Run agent now</button></div>
+<div class="card" style="margin-top:16px"><h3>Decision log</h3>${S.log.length?`<ul class="log">${S.log.map(l=>`<li class="${l.ok?"ok":"no"}">${esc(l.t)}</li>`).join("")}</ul>`:'<div class="empty">No decisions yet. Run the agent to start.</div>'}</div>`},
+receipts(){return`<h2>Receipts</h2><p class="sub">Every payment, with the transaction hash for the explorer.</p>${S.rec.length?`<div class="card tbl"><table><thead><tr><th>Time</th><th>Merchant</th><th>Amount</th><th>Transaction</th></tr></thead><tbody>${S.rec.map(r=>`<tr><td>${r.time}</td><td>${esc(r.m)}</td><td>${f(r.amt)}</td><td><code>${r.tx.slice(0,10)}…${r.tx.slice(-6)}</code></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No payments yet. Receipts appear after the agent pays an invoice.</div>'}`}};
+function render(){const n=(location.hash||"#home").slice(1);const v=V[n]?n:"home";
+$("#view").innerHTML=V[v]();
+document.querySelectorAll("nav a.l").forEach(a=>a.toggleAttribute("aria-current",a.dataset.n===v)||a.removeAttribute("aria-current"));
+document.querySelectorAll("nav a.l[aria-current]").forEach(a=>a.setAttribute("aria-current","page"));
+$("#wal").textContent=S.conn?"0x7B3d…c91A":"Not connected"}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a,v=b.dataset.v;
+if(a==="connect"){S.conn=true;location.hash="dashboard";toast("Wallet connected");render()}
+else if(a==="revoke")$("#dlg").showModal();
+else if(a==="cancel")$("#dlg").close();
+else if(a==="revokeok"){S.revoked=true;$("#dlg").close();toast("Agent revoked");render()}
+else if(a==="run")run();
+else if(a==="rm"){S.pol.m=S.pol.m.filter(m=>m!==v);render()}
+else if(a==="addm"){const x=$("#nm").value.trim();if(!x)return toast("Enter a merchant name");if(!S.pol.m.includes(x))S.pol.m.push(x);render()}
+else if(a==="save"){const g=n=>+document.querySelector('#pf [name="'+n+'"]').value;
+const b=g("budget"),c=g("cap"),d=g("daily"),y=g("days");
+if(!(b>0&&c>0&&d>0&&y>0))return toast("Fill in every rule with a number above zero");
+if(c>b)return toast("The per-payment cap can’t be higher than the total budget");
+Object.assign(S.pol,{budget:b,cap:c,daily:d,days:y});S.exp=Date.now()+y*day;S.revoked=false;toast("Rules saved");render()}
+else if(a==="dep"||a==="wd"){const x=+$("#amt").value;if(!(x>0))return toast("Enter an amount above zero");
+if(a==="wd"&&x>S.bal)return toast("You can’t withdraw more than the vault holds");
+S.bal+=a==="dep"?x:-x;toast(a==="dep"?"Deposited":"Withdrawn");render()}
+else if(a==="newinv"){const m=$("#im").value.trim(),x=+$("#ia").value,d=$("#id").value.trim();
+if(!m||!(x>0)||!d)return toast("Add a merchant, an amount and a description");
+S.inv.unshift({id:S.n++,m,memo:d,amt:x,st:"open"});toast("Invoice created");render()}
+else if(a==="flt"){S.flt=v;render()}});
+$("#theme").onclick=()=>{const r=document.documentElement,d=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;r.dataset.theme=d?"light":"dark"};
+addEventListener("hashchange",render);render();
+</script>
+</body>
+</html>
