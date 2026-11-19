@@ -41,7 +41,10 @@ export default function Home() {
             >
               Open dashboard <span>↗</span>
             </Link>
-            <Link className="text-link" href="/rules">
+            <Link
+              className="button hero-button hero-button-secondary"
+              href="/rules"
+            >
               Explore the rules <span>→</span>
             </Link>
           </div>

@@ -15,7 +15,7 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 32px 0 48px;
+  padding: 84px 0 48px;
 }
 .landing-copy {
   display: flex;
@@ -71,11 +71,36 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 22px;
+  gap: 12px;
 }
 .hero-button {
   min-height: 46px;
   padding: 0 19px;
+  transform: none !important;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.hero-button:hover,
+.hero-button:active,
+.landing-bottom .button:hover,
+.landing-bottom .button:active {
+  transform: none !important;
+  box-shadow: none;
+}
+.hero-button-secondary {
+  border: 1px solid #d2ded6;
+  background: #ffffff;
+  color: #1e3127;
+}
+.hero-button-secondary:hover {
+  background: #f5f9f6;
+  border-color: #b8ccbf;
+}
+.hero-button-secondary span {
+  color: var(--green);
+  margin-left: 2px;
 }
 .hero-button span,
 .landing-bottom .button span {

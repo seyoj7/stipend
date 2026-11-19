@@ -170,20 +170,7 @@ p {
   display: flex;
   flex-direction: column;
 }
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 8;
-  height: 76px;
-  padding: 0 clamp(24px, 5vw, 66px);
-  border-bottom: 1px solid rgba(225, 233, 228, 0.8);
-  background: rgba(244, 247, 245, 0.9);
-  backdrop-filter: blur(18px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-}
+
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -219,16 +206,35 @@ p {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
-  cursor: pointer;
+  cursor: default;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   user-select: none;
 }
-.network-chip:hover {
-  background: #27382f;
-  border-color: #42584c;
+.network-chip:hover,
+.network-chip:active,
+.network-chip:focus {
+  background: #202d26 !important;
+  border-color: #32443b !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
 }
 .top-actions button,
-.top-actions button * {
+.top-actions [data-rk] button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  line-height: 1 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  transition: none !important;
+  transform: none !important;
+  animation: none !important;
+}
+.top-actions button *,
+.top-actions [data-rk] button * {
   transition: none !important;
   transform: none !important;
   animation: none !important;
@@ -254,12 +260,17 @@ p {
   flex: 1;
 }
 .app-footer {
+  width: 100%;
+  margin: auto 0 0;
+  border-top: 1px solid var(--line);
+}
+.app-footer-inner {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   width: min(1440px, 100%);
-  margin: auto auto 0;
+  margin: 0 auto;
   padding: 19px clamp(20px, 3.5vw, 56px);
-  border-top: 1px solid var(--line);
   color: #94a19a;
   font:
     9px "DM Mono",
@@ -594,12 +605,23 @@ p {
   margin-left: 0;
 }
 .topbar {
+  position: sticky;
+  top: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(min(1440px, 100%) - (2 * clamp(20px, 3.5vw, 56px)));
+  margin: 12px auto 0;
   height: 62px;
-  padding: 0 clamp(16px, 3vw, 42px);
-  gap: 24px;
-  background: #17221e;
-  border-bottom: 1px solid #2a3731;
+  padding: 0 20px;
+  gap: 20px;
+  background: rgba(23, 34, 30, 0.96);
+  border: 1px solid #2a3731;
+  border-radius: 14px;
   color: #f4f7f5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(12px);
 }
 .brand {
   flex: 0 0 auto;
@@ -640,20 +662,6 @@ p {
   margin-left: auto;
 }
 
-.page-context {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: min(1440px, 100%);
-  margin: 0 auto;
-  padding: 13px clamp(20px, 3.5vw, 56px) 0;
-  color: #8b9992;
-  font-size: 11px;
-}
-.page-context b {
-  color: var(--ink);
-  font-size: 11px;
-}
 .network-alert {
   top: 62px;
 }
@@ -683,7 +691,6 @@ p {
   }
   .side-nav::-webkit-scrollbar { display: none; }
   .nav-link { min-height: 30px; }
-  .page-context { padding: 12px 16px 0; }
   .page-main { padding: 24px 16px 42px; }
   .network-alert { top: 100px; }
 }
@@ -740,7 +747,7 @@ p {
     align-items: flex-start;
     flex-direction: column;
   }
-  .app-footer {
+  .app-footer-inner {
     padding: 16px;
     font-size: 8px;
   }
@@ -789,14 +796,31 @@ p {
 
 @media (max-width: 850px) {
   .main-column { margin-left: 0; }
-  .topbar { padding: 0 16px; }
+  .topbar {
+    width: calc(100% - 32px);
+    margin: 8px auto 0;
+    padding: 0 16px;
+    gap: 12px;
+  }
 }
 @media (max-width: 680px) {
-  .topbar { height: auto; min-height: 60px; flex-wrap: wrap; gap: 0 12px; padding: 10px 12px 0; }
+  .topbar {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    top: 0;
+    height: auto;
+    min-height: 60px;
+    flex-wrap: wrap;
+    gap: 0 12px;
+    padding: 10px 12px 0;
+  }
   .brand { min-height: 32px; }
   .side-nav { order: 3; flex: 1 0 calc(100% + 24px); overflow-x: auto; margin: 7px -12px 0; padding: 0 8px 8px; scrollbar-width: none; }
   .side-nav::-webkit-scrollbar { display: none; }
-  .page-context { padding: 12px 16px 0; }
   .page-main { padding: 24px 16px 42px; }
   .network-alert { top: 100px; margin: 10px 12px 0; }
 }

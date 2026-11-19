@@ -21,7 +21,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { isConnected, chainId } = useAccount();
   const { switchChain, isPending: switching } = useSwitchChain();
   const wrongNetwork = isConnected && chainId !== aevum.id;
-  const currentPage = pathname === "/" ? "Overview" : links.find((item) => item.href === pathname)?.label ?? "Overview";
 
   return (
     <div className="app-frame">
@@ -55,9 +54,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <ConnectButton showBalance={false} chainStatus="icon" accountStatus={{ smallScreen: "avatar", largeScreen: "address" }} />
           </div>
         </header>
-        {pathname !== "/" && (
-          <div className="page-context"><span>Workspace</span><span className="crumb-slash">/</span><b>{currentPage}</b></div>
-        )}
         {wrongNetwork && (
           <div className="network-alert" role="alert">
             <span><b>Wrong network.</b> Connect to Aevum Testnet (chain 44005) to use Stipend.</span>
@@ -67,7 +63,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <main className="page-main">{children}</main>
-        <footer className="app-footer"><span>STIPEND · AGENT SPENDING WALLET</span><a href="https://explorer-test.qday.info" target="_blank" rel="noreferrer">Aevum explorer ↗</a></footer>
+        <footer className="app-footer">
+          <div className="app-footer-inner">
+            <span>STIPEND · AGENT SPENDING WALLET</span>
+            <a href="https://explorer-test.qday.info" target="_blank" rel="noreferrer">Aevum explorer ↗</a>
+          </div>
+        </footer>
       </div>
     </div>
   );
