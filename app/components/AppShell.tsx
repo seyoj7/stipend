@@ -63,12 +63,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <main className="page-main">{children}</main>
-        <footer className="app-footer">
-          <div className="app-footer-inner">
-            <span>STIPEND · AGENT SPENDING WALLET</span>
-            <a href="https://explorer-test.qday.info" target="_blank" rel="noreferrer">Aevum explorer ↗</a>
-          </div>
-        </footer>
+        {pathname === "/" && (
+          <footer className="app-footer">
+            <div className="app-footer-inner">
+              <span>STIPEND · AGENT SPENDING WALLET</span>
+              <a href="https://explorer-test.qday.info" target="_blank" rel="noreferrer">Aevum explorer ↗</a>
+            </div>
+          </footer>
+        )}
       </div>
     </div>
   );
