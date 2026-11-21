@@ -138,7 +138,7 @@ npm install
 Copy the example file and fill in the values:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
 | Variable                               | Description                                          |
