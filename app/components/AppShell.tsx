@@ -3,10 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { useAccount, useSwitchChain } from "wagmi";
 import { useEffect, useState } from "react";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount, useSwitchChain } from "wagmi";
 import { aevum } from "@/app/lib/stipend";
 
 const links = [
@@ -20,12 +19,12 @@ const links = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
-  const { openConnectModal } = useConnectModal();
-  useEffect(() => setMounted(true), []);
   const pathname = usePathname();
   const { isConnected, chainId } = useAccount();
   const { switchChain, isPending: switching } = useSwitchChain();
   const wrongNetwork = isConnected && chainId !== aevum.id;
+
+  useEffect(() => setMounted(true), []);
 
   return (
     <div className="app-frame">
@@ -59,9 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {mounted ? (
               <ConnectButton showBalance={false} chainStatus="icon" accountStatus={{ smallScreen: "avatar", largeScreen: "address" }} />
             ) : (
-              <button type="button" className="wallet-connect-placeholder" aria-label="Connect wallet" onClick={() => openConnectModal?.()}>
-                Connect Wallet
-              </button>
+              <span className="wallet-connect-placeholder" aria-hidden="true">Connect Wallet</span>
             )}
           </div>
         </header>

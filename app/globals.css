@@ -192,6 +192,22 @@ p {
   justify-content: flex-end;
   gap: 11px;
 }
+.wallet-connect-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--rk-radii-connectButton, 12px);
+  background: var(--rk-colors-connectButtonBackground, #fff);
+  color: var(--rk-colors-connectButtonText, #25292e);
+  font-family: var(--rk-fonts-body, inherit);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+}
 .network-chip {
   display: inline-flex;
   align-items: center;
@@ -661,21 +677,6 @@ p {
 .top-actions {
   margin-left: auto;
 }
-.wallet-connect-placeholder {
-  min-height: 36px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 8px;
-  background: #f3ba2f;
-  color: #1b211d;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.wallet-connect-placeholder:hover { background: #ffcc4d; }
-
 .network-alert {
   top: 62px;
 }
