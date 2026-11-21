@@ -10,34 +10,94 @@ export type OpenInvoice = {
   amount: bigint;
 };
 
+const STIPEND_DEPLOYMENT_BLOCK = 3_756_025n;
+const LOG_BLOCK_CHUNK_SIZE = 1_000n;
+
+type InvoiceCache = {
+  scannedThrough: bigint;
+  openInvoices: Map<bigint, OpenInvoice>;
+  scan?: Promise<void>;
+};
+
+type InvoiceCacheGlobal = typeof globalThis & {
+  __stipendInvoiceCaches?: Map<string, InvoiceCache>;
+};
+
+const invoiceCaches = ((globalThis as InvoiceCacheGlobal).__stipendInvoiceCaches ??=
+  new Map<string, InvoiceCache>());
+
 export async function getOpenInvoices(forAgent?: Address): Promise<OpenInvoice[]> {
-  const nextId = await publicClient.readContract({
-    address: STIPEND_ADDRESS, abi: stipendAbi, functionName: "nextInvoiceId",
-  });
-  const invoices: OpenInvoice[] = [];
+  const agentFilter = forAgent ?? getAgentAccount().address;
+  const cacheKey = `${STIPEND_ADDRESS.toLowerCase()}:${agentFilter.toLowerCase()}`;
+  let cache = invoiceCaches.get(cacheKey);
+  if (!cache) {
+    cache = { scannedThrough: STIPEND_DEPLOYMENT_BLOCK - 1n, openInvoices: new Map() };
+    invoiceCaches.set(cacheKey, cache);
+  }
 
-  // Bound concurrent reads so a large invoice history does not flood the public RPC.
-  const chunkSize = 40n;
-  for (let first = 1n; first < nextId; first += chunkSize) {
-    const last = first + chunkSize < nextId ? first + chunkSize : nextId;
-    const results = await Promise.all(
-      Array.from({ length: Number(last - first) }, (_, offset) => {
-        const id = first + BigInt(offset);
-        return publicClient.readContract({
-          address: STIPEND_ADDRESS, abi: stipendAbi, functionName: "invoices", args: [id],
-        }).then((invoice) => ({ id, invoice }));
-      }),
-    );
+  while (true) {
+    const latestBlock = await publicClient.getBlockNumber();
+    if (cache.scannedThrough >= latestBlock) break;
+    if (cache.scan) {
+      await cache.scan;
+      continue;
+    }
 
-    for (const { id, invoice } of results) {
-      if (invoice[0] === "0x0000000000000000000000000000000000000000" || invoice[3]) continue;
-      const agent = getAddress(invoice[1]);
-      if (forAgent && agent !== forAgent) continue;
-      invoices.push({ id, merchant: getAddress(invoice[0]), agent, amount: invoice[2] });
+    cache.scan = (async () => {
+      const scanTo = await publicClient.getBlockNumber();
+      for (let fromBlock = cache!.scannedThrough + 1n; fromBlock <= scanTo; fromBlock += LOG_BLOCK_CHUNK_SIZE) {
+        const toBlock = fromBlock + LOG_BLOCK_CHUNK_SIZE - 1n < scanTo
+          ? fromBlock + LOG_BLOCK_CHUNK_SIZE - 1n
+          : scanTo;
+        const [createdEvents, paidEvents] = await Promise.all([
+          publicClient.getContractEvents({
+            address: STIPEND_ADDRESS,
+            abi: stipendAbi,
+            eventName: "InvoiceCreated",
+            args: { agent: agentFilter },
+            fromBlock,
+            toBlock,
+          }),
+          publicClient.getContractEvents({
+            address: STIPEND_ADDRESS,
+            abi: stipendAbi,
+            eventName: "InvoicePaid",
+            args: { agent: agentFilter },
+            fromBlock,
+            toBlock,
+          }),
+        ]);
+
+        for (const event of createdEvents) {
+          const id = event.args.invoiceId;
+          if (id === undefined) continue;
+          const invoice = await publicClient.readContract({
+            address: STIPEND_ADDRESS, abi: stipendAbi, functionName: "invoices", args: [id],
+          });
+          if (invoice[3]) continue;
+          const agent = getAddress(invoice[1]);
+          cache!.openInvoices.set(id, {
+            id,
+            merchant: getAddress(invoice[0]),
+            agent,
+            amount: invoice[2],
+          });
+        }
+        for (const event of paidEvents) {
+          const id = event.args.invoiceId;
+          if (id !== undefined) cache!.openInvoices.delete(id);
+        }
+        cache!.scannedThrough = toBlock;
+      }
+    })();
+    try {
+      await cache.scan;
+    } finally {
+      cache.scan = undefined;
     }
   }
 
-  return invoices;
+  return [...cache.openInvoices.values()];
 }
 
 export async function getAgentOpenInvoices() {

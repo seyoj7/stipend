@@ -23,7 +23,6 @@
 .merchant-entry .pill { padding: 4px 7px; font-size: 8px; }
 .merchant-remove { width: 24px; height: 24px; padding: 0; border: 0; background: none; color: #9aa79f; cursor: pointer; font-size: 19px; }
 .merchant-remove:hover { color: var(--red); }.merchant-remove:disabled { opacity:.4;cursor:not-allowed; }
-.merchant-cache-note { margin: 12px 0 0; color: #a0aca5; font-size: 9px; line-height: 1.65; }
 .vault-card { padding: 19px; }
 .vault-title { display: flex; align-items: center; gap: 10px; }
 .vault-icon-large { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: #e6f4ec; color: var(--green); font-size: 19px; }

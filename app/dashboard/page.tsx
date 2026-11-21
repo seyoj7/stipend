@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const tx = useTransaction();
   const { writeContractAsync } = useWriteContract();
   const payer = useReadContract({ address: stipendAddress, abi: stipendAbi, functionName: "payer" });
+  const paused = useReadContract({ address: stipendAddress, abi: stipendAbi, functionName: "paused", query: { refetchInterval: 8_000 } });
   const balance = useReadContract({ address: stipendAddress, abi: stipendAbi, functionName: "vaultBalance", query: { refetchInterval: 8_000 } });
   const policy = useReadContract({ address: stipendAddress, abi: stipendAbi, functionName: "policies", args: [agent ?? noAgent], query: { enabled: Boolean(agent), refetchInterval: 8_000 } });
   const day = BigInt(Math.floor(Date.now() / 86_400_000));
@@ -37,9 +38,22 @@ export default function DashboardPage() {
     } catch { /* Feedback is shown by the transaction panel. */ }
   }
 
+  async function toggleVaultPause() {
+    if (!isPayer || paused.data === undefined) return;
+    const functionName = paused.data ? "unpause" : "pause";
+    try {
+      await tx.execute(
+        () => writeContractAsync({ address: stipendAddress, abi: stipendAbi, functionName }),
+        paused.data ? "Vault unpaused." : "Vault paused.",
+      );
+      await paused.refetch();
+    } catch { /* Feedback is shown by the transaction panel. */ }
+  }
+
   return (
     <div className="dashboard-page">
       <PageHeader eyebrow="ACCOUNT OVERVIEW" title="Your allowance, at a glance." subtitle="See how much is funded, what your agent has spent, and how much permission remains." action={<span className="dash-network"><i /> AEVUM TESTNET</span>} />
+      {paused.data && <div className="warning-box dash-notice dash-paused-notice"><StatusPill tone="warning">Vault paused</StatusPill><span>Agent payments are currently disabled until the payer unpauses the vault.</span></div>}
       {!isConnected && <div className="warning-box dash-notice">Connect the payer wallet for this vault to manage its allowance.</div>}
       {isConnected && chainId === aevum.id && !isPayer && <div className="warning-box dash-notice">This connected wallet is not the payer that owns this Stipend vault. Read-only information is still available.</div>}
       <section className="dash-top-grid">
@@ -57,7 +71,7 @@ export default function DashboardPage() {
         </div>
       </section>
       <section className="dash-bottom-grid">
-        <article className="card card-pad"><div className="section-head"><div><h2 className="section-label">Agent wallet</h2><p className="muted tiny">The only address permitted to pay invoices.</p></div><StatusPill tone={agent ? "good" : "warning"}>{agent ? "Connected" : "Loading"}</StatusPill></div><div className="agent-address">{agent ?? "Loading agent address…"}</div><div className="address-caption">AGENT · AEVUM 44005</div><div className="divider" /><div className="agent-actions"><Link className="button button-quiet" href="/rules">Edit spending rules</Link><button className="button button-danger" disabled={!isPayer || !agent || currentPolicy?.[5] || tx.status === "pending"} onClick={revokeAgent}>Revoke agent</button></div><TransactionFeedback state={tx} />{isConnected && chainId !== aevum.id && <div className="tiny muted" style={{ marginTop: 10 }}>Switch to Aevum Testnet to send transactions.</div>}</article>
+        <article className="card card-pad"><div className="section-head"><div><h2 className="section-label">Agent wallet</h2><p className="muted tiny">The only address permitted to pay invoices.</p></div><StatusPill tone={agent ? "good" : "warning"}>{agent ? "Connected" : "Loading"}</StatusPill></div><div className="agent-address">{agent ?? "Loading agent address…"}</div><div className="address-caption">AGENT · AEVUM 44005</div><div className="divider" /><div className="agent-actions"><Link className="button button-quiet" href="/rules">Edit spending rules</Link><div className="agent-action-buttons"><button className="button button-danger" disabled={!isPayer || !agent || currentPolicy?.[5] || tx.status === "pending"} onClick={revokeAgent}>Revoke agent</button>{paused.data !== undefined && <button className={`button ${paused.data ? "button-primary" : "button-quiet"}`} disabled={!isPayer || tx.status === "pending"} onClick={toggleVaultPause}>{paused.data ? "Unpause vault" : "Pause vault"}</button>}</div></div><TransactionFeedback state={tx} />{isConnected && chainId !== aevum.id && <div className="tiny muted" style={{ marginTop: 10 }}>Switch to Aevum Testnet to send transactions.</div>}</article>
         <article className="card card-pad recent-card"><div className="section-head"><div><h2 className="section-label">Keep the limits clear.</h2><p className="muted tiny">Your agent stays inside the policy on every invoice.</p></div><span className="shield-icon">⌑</span></div><div className="limit-row"><span>Per payment cap</span><b>{usd(currentPolicy?.[1])} <small>tUSD8</small></b></div><div className="limit-row"><span>Daily spending</span><b>{usd(dailySpent.data)} <small>/ {usd(currentPolicy?.[2])}</small></b></div><div className="limit-row"><span>Approved merchants</span><b>Rules <span className="green-arrow">↗</span></b></div><Link className="button button-primary full-button" href="/invoices">Review invoices <span>→</span></Link></article>
       </section>
       <div className="dash-footnote"><span>◈</span> Funds remain in your vault. Revoke agent permission at any time.</div>

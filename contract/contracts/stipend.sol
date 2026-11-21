@@ -42,7 +42,8 @@ contract Stipend is ReentrancyGuard, Pausable {
         DailyLimitExceeded,
         InvoiceAlreadyPaid,
         InsufficientVaultBalance,
-        WrongAgent
+        WrongAgent,
+        InvoiceNotFound
     }
 
     mapping(address => Policy) public policies;
@@ -59,6 +60,9 @@ contract Stipend is ReentrancyGuard, Pausable {
     event InvoicePaid(uint256 indexed invoiceId, address indexed agent, address indexed merchant, uint256 amount);
     event PaymentRejected(uint256 indexed invoiceId, address indexed agent, RejectionReason reason);
     event AgentRevoked(address indexed payer, address indexed agent);
+    event AgentReinstated(address indexed payer, address indexed agent);
+    event SpentReset(address indexed payer, address indexed agent);
+    event ExcessSwept(address indexed payer, uint256 amount);
 
     modifier onlyPayer() {
         require(msg.sender == payer, "Stipend: payer only");
@@ -88,6 +92,13 @@ contract Stipend is ReentrancyGuard, Pausable {
         emit Withdrawn(payer, amount);
     }
 
+    function sweepExcess() external onlyPayer nonReentrant {
+        uint256 excess = token.balanceOf(address(this)) - vaultBalance;
+        require(excess > 0, "Stipend: nothing to sweep");
+        token.safeTransfer(payer, excess);
+        emit ExcessSwept(payer, excess);
+    }
+
     function setPolicy(
         address agent,
         uint256 totalBudget,
@@ -100,13 +111,22 @@ contract Stipend is ReentrancyGuard, Pausable {
         require(perPaymentCap <= totalBudget && dailyLimit <= totalBudget, "Stipend: inconsistent limits");
         require(expiry > block.timestamp, "Stipend: expiry must be future");
         Policy storage policy = policies[agent];
+        require(totalBudget >= policy.spent, "Stipend: budget below spent");
         policy.totalBudget = totalBudget;
         policy.perPaymentCap = perPaymentCap;
         policy.dailyLimit = dailyLimit;
         policy.expiry = expiry;
-        policy.spent = 0;
-        policy.revoked = false;
         emit PolicySet(msg.sender, agent, totalBudget, perPaymentCap, dailyLimit, expiry);
+    }
+
+    function reinstate(address agent) external onlyPayer {
+        policies[agent].revoked = false;
+        emit AgentReinstated(msg.sender, agent);
+    }
+
+    function resetSpent(address agent) external onlyPayer {
+        policies[agent].spent = 0;
+        emit SpentReset(msg.sender, agent);
     }
 
     function addMerchant(address agent, address merchant) external onlyPayer {
@@ -138,6 +158,7 @@ contract Stipend is ReentrancyGuard, Pausable {
     /// @notice A merchant creates an invoice for one agent; the caller is stored as merchant.
     function createInvoice(address agent, uint256 amount) external returns (uint256 invoiceId) {
         require(agent != address(0) && amount > 0, "Stipend: invalid invoice");
+        require(allowedMerchant[agent][msg.sender], "Stipend: merchant not approved");
         invoiceId = nextInvoiceId++;
         invoices[invoiceId] = Invoice({merchant: msg.sender, agent: agent, amount: amount, paid: false});
         emit InvoiceCreated(invoiceId, msg.sender, agent, amount);
@@ -167,7 +188,7 @@ contract Stipend is ReentrancyGuard, Pausable {
     function _rejectionReason(uint256 invoiceId, Invoice storage invoice, address agent)
         private view returns (RejectionReason)
     {
-        if (invoiceId == 0 || invoice.merchant == address(0)) return RejectionReason.WrongAgent;
+        if (invoiceId == 0 || invoice.merchant == address(0)) return RejectionReason.InvoiceNotFound;
         if (invoice.agent != agent) return RejectionReason.WrongAgent;
         if (invoice.paid) return RejectionReason.InvoiceAlreadyPaid;
         Policy storage policy = policies[agent];

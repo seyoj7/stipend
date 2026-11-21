@@ -19,6 +19,11 @@
 .dash-notice {
   margin: -7px 0 17px;
 }
+.dash-paused-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .dash-top-grid {
   display: grid;
   grid-template-columns: 1.4fr 0.8fr;
@@ -220,6 +225,12 @@
 .agent-actions {
   display: flex;
   justify-content: space-between;
+  gap: 9px;
+}
+.agent-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 9px;
 }
 .shield-icon {

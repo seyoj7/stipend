@@ -27,17 +27,31 @@ function logDecision(decision: Decision) {
   );
 }
 
-const RUN_SIGNATURE_WINDOW_SECONDS = 120;
+const RUN_SIGNATURE_WINDOW_SECONDS = 60;
+// This map only protects a single server instance; multi-instance deployments need a shared store.
+const usedRunSignatures = new Map<string, number>();
+let agentRunInProgress = false;
 
 export async function runAgent(
   authorization: string | null,
   signedRequest?: { timestamp: number; signature: `0x${string}` },
 ) {
+  if (agentRunInProgress) {
+    return { status: 409, body: { error: "A run is already in progress" } };
+  }
+  agentRunInProgress = true;
+
+  try {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  for (const [signature, firstSeen] of usedRunSignatures) {
+    if (nowSeconds - firstSeen > RUN_SIGNATURE_WINDOW_SECONDS) usedRunSignatures.delete(signature);
+  }
+
+  let signedSignatureToRecord: string | undefined;
   let authorized = isAuthorizedAgentRun(authorization);
   if (!authorized && signedRequest && Number.isInteger(signedRequest.timestamp) && /^0x[0-9a-fA-F]+$/.test(signedRequest.signature)) {
-    const now = Math.floor(Date.now() / 1000);
     const timestamp = signedRequest.timestamp;
-    if (Math.abs(now - timestamp) <= RUN_SIGNATURE_WINDOW_SECONDS) {
+    if (Math.abs(nowSeconds - timestamp) <= RUN_SIGNATURE_WINDOW_SECONDS) {
       const payer = await publicClient.readContract({
         address: STIPEND_ADDRESS,
         abi: stipendAbi,
@@ -51,6 +65,7 @@ export async function runAgent(
       ].join("\n");
       try {
         authorized = await verifyMessage({ address: payer, message, signature: signedRequest.signature });
+        if (authorized) signedSignatureToRecord = signedRequest.signature.toLowerCase();
       } catch {
         authorized = false;
       }
@@ -61,8 +76,32 @@ export async function runAgent(
     return { status: 401, body: { error: "Unauthorized" } };
   }
 
+  if (signedSignatureToRecord) {
+    if (usedRunSignatures.has(signedSignatureToRecord)) {
+      return { status: 401, body: { error: "Run request already used" } };
+    }
+    usedRunSignatures.set(signedSignatureToRecord, nowSeconds);
+  }
+
   const { account, client: walletClient } = getAgentWalletClient();
-  const invoices = await getOpenInvoices();
+  const discoveredInvoices = await getOpenInvoices(account.address);
+  const approvals = new Map<string, boolean>();
+  const invoices: typeof discoveredInvoices = [];
+  for (const invoice of discoveredInvoices) {
+    const merchantKey = invoice.merchant.toLowerCase();
+    let allowed = approvals.get(merchantKey);
+    if (allowed === undefined) {
+      allowed = await publicClient.readContract({
+        address: STIPEND_ADDRESS,
+        abi: stipendAbi,
+        functionName: "allowedMerchant",
+        args: [account.address, invoice.merchant],
+      });
+      approvals.set(merchantKey, allowed);
+    }
+    if (allowed) invoices.push(invoice);
+    if (invoices.length === 20) break;
+  }
   const [policy, balance, paused, block] = await Promise.all([
     publicClient.readContract({
       address: STIPEND_ADDRESS,
@@ -88,20 +127,12 @@ export async function runAgent(
 
   for (const invoice of invoices) {
     let reason: string | undefined;
-    const [merchantAllowed, spentToday] = await Promise.all([
-      publicClient.readContract({
-        address: STIPEND_ADDRESS,
-        abi: stipendAbi,
-        functionName: "allowedMerchant",
-        args: [account.address, invoice.merchant],
-      }),
-      publicClient.readContract({
-        address: STIPEND_ADDRESS,
-        abi: stipendAbi,
-        functionName: "dailySpent",
-        args: [account.address, day],
-      }),
-    ]);
+    const spentToday = await publicClient.readContract({
+      address: STIPEND_ADDRESS,
+      abi: stipendAbi,
+      functionName: "dailySpent",
+      args: [account.address, day],
+    });
 
     if (invoice.agent !== account.address)
       reason = "invoice_assigned_to_different_agent";
@@ -109,7 +140,6 @@ export async function runAgent(
     else if (policy[5]) reason = "agent_revoked";
     else if (policy[3] === 0n || block.timestamp > policy[3])
       reason = "policy_expired";
-    else if (!merchantAllowed) reason = "merchant_not_approved";
     else if (invoice.amount > policy[1]) reason = "over_per_payment_cap";
     else if (policy[4] + spentThisRun + invoice.amount > policy[0])
       reason = "over_total_budget";
@@ -130,6 +160,14 @@ export async function runAgent(
       decisions.push(result);
       continue;
     }
+
+    const currentInvoice = await publicClient.readContract({
+      address: STIPEND_ADDRESS,
+      abi: stipendAbi,
+      functionName: "invoices",
+      args: [invoice.id],
+    });
+    if (currentInvoice[3]) continue;
 
     try {
       const hash = await walletClient.writeContract({
@@ -177,4 +215,7 @@ export async function runAgent(
       decisions,
     },
   };
+  } finally {
+    agentRunInProgress = false;
+  }
 }

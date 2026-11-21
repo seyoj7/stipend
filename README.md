@@ -47,7 +47,7 @@ flowchart LR
 
 | Item             | Value                                                                                                                              |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Stipend contract | [`0x48AE961094A35c56a19CE93639179706441EC8f4`](https://explorer-test.qday.info/address/0x48AE961094A35c56a19CE93639179706441EC8f4) |
+| Stipend contract | [`0x812c046D4D93489fbD955c584CEC8d2b4b0aa97C`](https://explorer-test.qday.info/address/0x812c046D4D93489fbD955c584CEC8d2b4b0aa97C) |
 | Network          | Aevum Testnet (chain 44005)                                                                                                        |
 | Explorer         | [explorer-test.qday.info](https://explorer-test.qday.info)                                                                         |
 

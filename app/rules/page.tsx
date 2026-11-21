@@ -2,18 +2,22 @@
 
 import "./page.css";
 import { useEffect, useState } from "react";
-import { formatUnits, isAddress, parseUnits, type Address } from "viem";
+import { formatUnits, isAddress, parseAbiItem, parseUnits, type Address } from "viem";
 import { waitForTransactionReceipt } from "wagmi/actions";
-import { useAccount, useConfig, useReadContract, useWriteContract } from "wagmi";
+import { useAccount, useConfig, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { PageHeader } from "@/app/components/PageHeader";
 import { StatusPill } from "@/app/components/StatusPill";
 import { TransactionFeedback } from "@/app/components/TransactionFeedback";
 import { useAgentAddress } from "@/app/hooks/useAgentAddress";
 import { useTransaction } from "@/app/hooks/useTransaction";
-import { aevum, stipendAbi, stipendAddress, tokenAbi, tusd8Address } from "@/app/lib/stipend";
+import { aevum, stipendAbi, stipendAddress, stipendDeploymentBlock, tokenAbi, tusd8Address } from "@/app/lib/stipend";
+
+const merchantAddedEvent = parseAbiItem("event MerchantAdded(address indexed agent,address indexed merchant)");
+const merchantRemovedEvent = parseAbiItem("event MerchantRemoved(address indexed agent,address indexed merchant)");
 
 export default function RulesPage() {
   const { address, chainId, isConnected } = useAccount();
+  const publicClient = usePublicClient({ chainId: aevum.id });
   const config = useConfig();
   const { agent, error: agentError } = useAgentAddress();
   const tx = useTransaction();
@@ -24,6 +28,9 @@ export default function RulesPage() {
   const [days, setDays] = useState("7");
   const [merchantInput, setMerchantInput] = useState("");
   const [merchants, setMerchants] = useState<Address[]>([]);
+  const [merchantListState, setMerchantListState] = useState<"loading" | "ready" | "error">("loading");
+  const [merchantListError, setMerchantListError] = useState("");
+  const [merchantRefresh, setMerchantRefresh] = useState(0);
   const [amount, setAmount] = useState("");
   const [formError, setFormError] = useState("");
 
@@ -37,9 +44,6 @@ export default function RulesPage() {
 
   useEffect(() => {
     if (!agent) return;
-    const key = `stipend:merchants:${agent.toLowerCase()}`;
-    try { setMerchants((JSON.parse(localStorage.getItem(key) ?? "[]") as string[]).filter((item) => isAddress(item)).map((item) => item as Address)); }
-    catch { setMerchants([]); }
     if (policy.data) {
       setBudget(formatUnits(policy.data[0], 6));
       setCap(formatUnits(policy.data[1], 6));
@@ -49,15 +53,66 @@ export default function RulesPage() {
     }
   }, [agent, policy.data]);
 
-  function cacheMerchants(next: Address[]) {
-    setMerchants(next);
-    if (agent) localStorage.setItem(`stipend:merchants:${agent.toLowerCase()}`, JSON.stringify(next));
-  }
+  useEffect(() => {
+    if (!publicClient) return;
+    if (!agent) {
+      if (agentError) {
+        setMerchantListError(agentError);
+        setMerchantListState("error");
+      }
+      return;
+    }
+    let cancelled = false;
+    async function loadMerchants() {
+      setMerchantListState("loading");
+      setMerchantListError("");
+      try {
+        const latestBlock = await publicClient!.getBlockNumber();
+        const addresses = new Map<string, Address>();
+        for (let fromBlock = stipendDeploymentBlock; fromBlock <= latestBlock; fromBlock += 1_000n) {
+          const toBlock = fromBlock + 999n < latestBlock ? fromBlock + 999n : latestBlock;
+          const [added, removed] = await Promise.all([
+            publicClient!.getLogs({ address: stipendAddress, event: merchantAddedEvent, args: { agent: agent! }, fromBlock, toBlock }),
+            publicClient!.getLogs({ address: stipendAddress, event: merchantRemovedEvent, args: { agent: agent! }, fromBlock, toBlock }),
+          ]);
+          for (const log of [...added, ...removed]) {
+            const merchant = log.args.merchant;
+            if (merchant) addresses.set(merchant.toLowerCase(), merchant);
+          }
+        }
+        const candidates = [...addresses.values()];
+        const approvals = await Promise.all(candidates.map(async (merchant) => ({
+          merchant,
+          allowed: await publicClient!.readContract({
+            address: stipendAddress,
+            abi: stipendAbi,
+            functionName: "allowedMerchant",
+            args: [agent!, merchant],
+          }),
+        })));
+        if (!cancelled) {
+          setMerchants(approvals.filter(({ allowed }) => allowed).map(({ merchant }) => merchant));
+          setMerchantListState("ready");
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setMerchantListError(cause instanceof Error ? cause.message : "Could not load approved merchants from Aevum.");
+          setMerchantListState("error");
+        }
+      }
+    }
+    void loadMerchants();
+    return () => { cancelled = true; };
+  }, [agent, agentError, publicClient, merchantRefresh]);
 
   async function savePolicy() {
     tx.reset();
     setFormError("");
     if (!agent) return;
+    if (policy.data === undefined) {
+      setFormError("The current policy is still loading. Try saving again in a moment.");
+      return;
+    }
     try {
       const total = parseUnits(budget, 6);
       const perPayment = parseUnits(cap, 6);
@@ -65,6 +120,7 @@ export default function RulesPage() {
       const duration = Number(days);
       if (total <= 0n || perPayment <= 0n || dailyLimit <= 0n || !Number.isInteger(duration) || duration < 1) throw new Error("Enter positive limits and an expiry of at least one whole day.");
       if (perPayment > total || dailyLimit > total) throw new Error("The per-payment cap and daily limit must not exceed the total budget.");
+      if (total < policy.data[4]) throw new Error("The total budget cannot be lower than the amount already spent.");
       const expiry = BigInt(Math.floor(Date.now() / 1000) + duration * 86_400);
       await tx.execute(() => writeContractAsync({ address: stipendAddress, abi: stipendAbi, functionName: "setPolicy", args: [agent, total, perPayment, dailyLimit, expiry] }), "Spending rules saved on Aevum.");
       await policy.refetch();
@@ -80,7 +136,7 @@ export default function RulesPage() {
     const merchant = merchantInput as Address;
     try {
       await tx.execute(() => writeContractAsync({ address: stipendAddress, abi: stipendAbi, functionName: "addMerchant", args: [agent, merchant] }), "Merchant approved.");
-      cacheMerchants([...merchants.filter((item) => item.toLowerCase() !== merchant.toLowerCase()), merchant]);
+      setMerchantRefresh((revision) => revision + 1);
       setMerchantInput("");
     } catch { /* Feedback is shown below. */ }
   }
@@ -90,7 +146,7 @@ export default function RulesPage() {
     if (!agent) return;
     try {
       await tx.execute(() => writeContractAsync({ address: stipendAddress, abi: stipendAbi, functionName: "removeMerchant", args: [agent, merchant] }), "Merchant removed.");
-      cacheMerchants(merchants.filter((item) => item !== merchant));
+      setMerchantRefresh((revision) => revision + 1);
     } catch { /* Feedback is shown below. */ }
   }
 
@@ -152,8 +208,7 @@ export default function RulesPage() {
           </section>
           <section className="card card-pad merchant-section"><div className="rules-section-title"><span className="rules-number">02</span><div><h2 className="section-label">Approved merchants</h2><p className="muted tiny">Invoices from other wallets will be rejected.</p></div></div>
             <div className="merchant-input-row"><input className="field" value={merchantInput} onChange={(e) => setMerchantInput(e.target.value)} placeholder="Merchant wallet address · 0x…" /><button className="button" disabled={!canWrite || !agent || tx.status === "pending"} onClick={addMerchant}>＋ Add merchant</button></div>
-            <div className="merchant-list">{merchants.length ? merchants.map((merchant) => <div className="merchant-entry" key={merchant}><span className="merchant-address-icon">M</span><span className="merchant-address">{merchant}</span><StatusPill>Allowed</StatusPill><button className="merchant-remove" aria-label="Remove merchant" disabled={!canWrite || tx.status === "pending"} onClick={() => removeMerchant(merchant)}>×</button></div>) : <div className="empty-state">No merchant addresses cached yet. Add a merchant wallet to allow invoice payments.</div>}</div>
-            <p className="merchant-cache-note">The contract keeps the authoritative allowlist. This browser remembers addresses added here because the contract does not expose a merchant list.</p>
+            {merchantListState === "loading" ? <div className="empty-state">Scanning Aevum for merchant approval events…</div> : merchantListState === "error" ? <div className="danger-box rules-error">{merchantListError}</div> : <div className="merchant-list">{merchants.length ? merchants.map((merchant) => <div className="merchant-entry" key={merchant}><span className="merchant-address-icon">M</span><span className="merchant-address">{merchant}</span><StatusPill>Allowed</StatusPill><button className="merchant-remove" aria-label="Remove merchant" disabled={!canWrite || tx.status === "pending"} onClick={() => removeMerchant(merchant)}>×</button></div>) : <div className="empty-state">No approved merchants yet. Add a merchant wallet to allow its invoices.</div>}</div>}
           </section>
         </div>
         <aside className="rules-side-column">

@@ -6,7 +6,7 @@ import { privateKeyToAccount } from "viem/accounts";
 export const AEVUM_CHAIN_ID = 44_005;
 export const TUSD8_ADDRESS = getAddress("0x456569838f1d43009A91ebA4263147Afd7233483");
 export const STIPEND_ADDRESS = getAddress(
-  process.env.STIPEND_CONTRACT_ADDRESS ?? "0x48AE961094A35c56a19CE93639179706441EC8f4",
+  process.env.STIPEND_CONTRACT_ADDRESS ?? "0x812c046D4D93489fbD955c584CEC8d2b4b0aa97C",
 );
 
 export function getAgentAccount() {
