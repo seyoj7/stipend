@@ -661,6 +661,20 @@ p {
 .top-actions {
   margin-left: auto;
 }
+.wallet-connect-placeholder {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #f3ba2f;
+  color: #1b211d;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wallet-connect-placeholder:hover { background: #ffcc4d; }
 
 .network-alert {
   top: 62px;
