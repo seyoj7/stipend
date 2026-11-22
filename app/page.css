@@ -33,9 +33,9 @@ body {
   justify-content: center;
   gap: 9px;
   margin-bottom: 20px;
-  color: #688078;
+  color: #3b5249;
   font:
-    9px "DM Mono",
+    600 10px "DM Mono",
     monospace;
   letter-spacing: 1.3px;
 }
@@ -90,13 +90,13 @@ body {
   box-shadow: none;
 }
 .hero-button-secondary {
-  border: 1px solid #d2ded6;
-  background: #ffffff;
+  border: 1px solid var(--line);
+  background: var(--surface);
   color: #1e3127;
 }
 .hero-button-secondary:hover {
-  background: #f5f9f6;
-  border-color: #b8ccbf;
+  background: var(--surface-raised);
+  border-color: #aebfb6;
 }
 .hero-button-secondary span {
   color: var(--green);
@@ -407,57 +407,133 @@ body {
   padding: 69px 0 60px;
 }
 .section-intro {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 .landing-page .eyebrow {
   margin-bottom: 9px;
   color: var(--green);
   font:
-    9px "DM Mono",
+    600 10px "DM Mono",
     monospace;
   letter-spacing: 1.3px;
 }
 .section-intro h2,
 .landing-bottom h2 {
-  margin: 0 0 9px;
-  font-size: clamp(23px, 3vw, 31px);
-  letter-spacing: -1.3px;
+  margin: 0 0 10px;
+  font-size: clamp(26px, 3.2vw, 36px);
+  letter-spacing: -1.2px;
 }
 .section-intro p,
 .landing-bottom p {
   margin-bottom: 0;
-  color: #798880;
-  font-size: 12px;
+  max-width: 660px;
+  color: #60726a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.steps-container {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 8px 30px rgba(18, 41, 30, 0.05);
+  overflow: hidden;
 }
 .step-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 13px;
+  gap: 0;
 }
 .step-card {
-  min-height: 139px;
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: 13px;
-  background: #fbfdfb;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 26px 24px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
 }
-.step-card > span {
-  display: inline-block;
-  margin-bottom: 21px;
-  color: #71a287;
+.step-card:last-child {
+  border-right: none;
+}
+.step-card-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 26px;
+}
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--green);
+  color: #ffffff;
   font:
-    9px "DM Mono",
+    700 11px "DM Mono",
     monospace;
 }
+.step-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font:
+    700 9px "DM Mono",
+    monospace;
+  letter-spacing: 0.8px;
+}
+.step-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 .step-card h3 {
-  margin: 0 0 8px;
-  font-size: 15px;
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.4px;
 }
 .step-card p {
   margin: 0;
-  color: #7f8d85;
-  font-size: 12px;
+  color: #566861;
+  font-size: 12.5px;
   line-height: 1.7;
+}
+.step-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 44px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.step-meta-left {
+  color: #6d7f77;
+  font:
+    500 10px "DM Mono",
+    monospace;
+}
+.step-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: #374a42;
+  font:
+    600 9px "DM Mono",
+    monospace;
+  letter-spacing: 0.4px;
 }
 .landing-bottom {
   display: flex;
@@ -524,10 +600,12 @@ body {
     grid-template-columns: 1fr;
   }
   .step-card {
-    min-height: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding: 22px 18px 20px;
   }
-  .step-card > span {
-    margin-bottom: 10px;
+  .step-card:last-child {
+    border-bottom: none;
   }
   .landing-bottom {
     align-items: flex-start;

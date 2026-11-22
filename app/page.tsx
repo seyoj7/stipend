@@ -4,18 +4,27 @@ import "./page.css";
 const steps = [
   {
     number: "01",
+    tag: "DEPOSIT",
     title: "Fund the vault",
     body: "Deposit tUSD8 into a wallet you control. The agent never gets custody of the funds.",
+    metaLeft: "One-time tx",
+    metaRight: "Aevum Testnet",
   },
   {
     number: "02",
+    tag: "AUTHORIZE",
     title: "Set the boundaries",
     body: "Choose a budget, daily limit, per-payment cap, expiry, and approved merchants.",
+    metaLeft: "Rules Engine",
+    metaRight: "Non-Custodial",
   },
   {
     number: "03",
+    tag: "SETTLE",
     title: "Let it settle",
     body: "Invoices are checked against your rules before an agent payment is sent on Aevum.",
+    metaLeft: "Atomic check",
+    metaRight: "Pay on Rule Match",
   },
 ];
 
@@ -58,21 +67,32 @@ export default function Home() {
 
       <section className="landing-steps">
         <div className="section-intro">
-          <div className="eyebrow">HOW IT WORKS</div>
-          <h2>Autonomy, with a line around it.</h2>
+          <div className="eyebrow">WORKFLOW & LIFECYCLE</div>
+          <h2>How it works</h2>
           <p>
-            Every payment has a rule behind it. You decide the boundaries before
-            your agent starts.
+            Deposit once, set clear boundaries for your agent, and settle only when
+            invoices match your approved policies.
           </p>
         </div>
-        <div className="step-grid">
-          {steps.map((step) => (
-            <article className="step-card" key={step.number}>
-              <span>{step.number}</span>
-              <h3>{step.title}</h3>
-              <p>{step.body}</p>
-            </article>
-          ))}
+        <div className="steps-container">
+          <div className="step-grid">
+            {steps.map((step) => (
+              <article className="step-card" key={step.number}>
+                <div className="step-card-header">
+                  <span className="step-number">{step.number}</span>
+                  <span className="step-tag">{step.tag}</span>
+                </div>
+                <div className="step-card-body">
+                  <h3>{step.title}</h3>
+                  <p>{step.body}</p>
+                </div>
+                <div className="step-card-footer">
+                  <span className="step-meta-left">{step.metaLeft}</span>
+                  <span className="step-meta-pill">{step.metaRight}</span>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
       <section className="landing-bottom">

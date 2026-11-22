@@ -1,19 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap");
 
 :root {
-  --canvas: #f4f7f5;
-  --surface: #ffffff;
-  --ink: #16241f;
-  --muted: #6c7b75;
-  --line: #e1e9e4;
+  --canvas: #d6deda;
+  --surface: #ebf0ed;
+  --surface-raised: #f3f7f5;
+  --ink: #14221d;
+  --muted: #566761;
+  --line: #bcc9c2;
   --green: #087c57;
   --green-dark: #07593f;
-  --green-soft: #e3f3eb;
-  --gold: #a36a08;
-  --gold-soft: #fbf1dc;
-  --red: #b64839;
-  --red-soft: #fbeae7;
-  --shadow: 0 12px 40px rgba(33, 67, 51, 0.055);
+  --green-soft: #d2e7dc;
+  --gold: #996307;
+  --gold-soft: #f4e8cf;
+  --red: #b04334;
+  --red-soft: #f4ddd9;
+  --shadow: 0 12px 36px rgba(18, 41, 30, 0.08);
 }
 
 * {
@@ -359,7 +360,7 @@ p {
   padding: 0 15px;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: var(--surface);
+  background: var(--surface-raised);
   cursor: pointer;
   color: var(--ink);
   font-size: 12px;
@@ -456,9 +457,9 @@ p {
   width: 100%;
   height: 41px;
   padding: 0 11px;
-  border: 1px solid #dce6df;
+  border: 1px solid var(--line);
   border-radius: 9px;
-  background: #fbfcfb;
+  background: var(--surface-raised);
   color: var(--ink);
   font-size: 12px;
   outline: none;
