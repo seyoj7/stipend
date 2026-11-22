@@ -51,6 +51,14 @@ contract Stipend is ReentrancyGuard, Pausable {
     mapping(address => mapping(uint256 => uint256)) public dailySpent;
     mapping(uint256 => Invoice) public invoices;
 
+    // --- Merchant list per agent ---
+    mapping(address => address[]) private _merchantList;
+    mapping(address => mapping(address => uint256)) private _merchantIndex;
+
+    // --- Open invoice list per agent ---
+    mapping(address => uint256[]) private _openInvoiceList;
+    mapping(address => mapping(uint256 => uint256)) private _openInvoiceIndex;
+
     event Deposited(address indexed payer, uint256 amount);
     event Withdrawn(address indexed payer, uint256 amount);
     event PolicySet(address indexed payer, address indexed agent, uint256 totalBudget, uint256 perPaymentCap, uint256 dailyLimit, uint256 expiry);
@@ -133,12 +141,24 @@ contract Stipend is ReentrancyGuard, Pausable {
         require(agent != address(0) && merchant != address(0), "Stipend: zero address");
         require(!allowedMerchant[agent][merchant], "Stipend: merchant already allowed");
         allowedMerchant[agent][merchant] = true;
+        _merchantList[agent].push(merchant);
+        _merchantIndex[agent][merchant] = _merchantList[agent].length; // 1-based
         emit MerchantAdded(agent, merchant);
     }
 
     function removeMerchant(address agent, address merchant) external onlyPayer {
         require(allowedMerchant[agent][merchant], "Stipend: merchant not allowed");
         allowedMerchant[agent][merchant] = false;
+        // Swap-and-pop from the merchant list (1-based index)
+        uint256 idx = _merchantIndex[agent][merchant];
+        uint256 lastIdx = _merchantList[agent].length;
+        if (idx != lastIdx) {
+            address lastMerchant = _merchantList[agent][lastIdx - 1];
+            _merchantList[agent][idx - 1] = lastMerchant;
+            _merchantIndex[agent][lastMerchant] = idx;
+        }
+        _merchantList[agent].pop();
+        _merchantIndex[agent][merchant] = 0;
         emit MerchantRemoved(agent, merchant);
     }
 
@@ -161,6 +181,9 @@ contract Stipend is ReentrancyGuard, Pausable {
         require(allowedMerchant[agent][msg.sender], "Stipend: merchant not approved");
         invoiceId = nextInvoiceId++;
         invoices[invoiceId] = Invoice({merchant: msg.sender, agent: agent, amount: amount, paid: false});
+        // Add to agent's open invoice list
+        _openInvoiceList[agent].push(invoiceId);
+        _openInvoiceIndex[agent][invoiceId] = _openInvoiceList[agent].length; // 1-based
         emit InvoiceCreated(invoiceId, msg.sender, agent, amount);
     }
 
@@ -180,9 +203,55 @@ contract Stipend is ReentrancyGuard, Pausable {
         policy.spent += invoice.amount;
         dailySpent[msg.sender][day] += invoice.amount;
         vaultBalance -= invoice.amount;
+        // Remove from agent's open invoice list
+        _removeOpenInvoice(invoice.agent, invoiceId);
         token.safeTransfer(invoice.merchant, invoice.amount);
         emit InvoicePaid(invoiceId, msg.sender, invoice.merchant, invoice.amount);
         return true;
+    }
+
+    // --- Read functions ---
+
+    /// @notice Returns all approved merchants for an agent.
+    function getApprovedMerchants(address agent) external view returns (address[] memory) {
+        return _merchantList[agent];
+    }
+
+    /// @notice Returns a page of open invoice IDs for an agent.
+    /// @param agent  The agent address.
+    /// @param offset Zero-based starting index into the open invoice list.
+    /// @param limit  Maximum number of invoice IDs to return.
+    /// @return ids   The slice of open invoice IDs.
+    /// @return total The total number of open invoices for this agent.
+    function getOpenInvoices(address agent, uint256 offset, uint256 limit)
+        external view returns (uint256[] memory ids, uint256 total)
+    {
+        total = _openInvoiceList[agent].length;
+        if (offset >= total || limit == 0) {
+            return (new uint256[](0), total);
+        }
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        uint256 count = end - offset;
+        ids = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            ids[i] = _openInvoiceList[agent][offset + i];
+        }
+    }
+
+    // --- Internal helpers ---
+
+    function _removeOpenInvoice(address agent, uint256 invoiceId) private {
+        uint256 idx = _openInvoiceIndex[agent][invoiceId];
+        if (idx == 0) return; // not in list
+        uint256 lastIdx = _openInvoiceList[agent].length;
+        if (idx != lastIdx) {
+            uint256 lastInvoiceId = _openInvoiceList[agent][lastIdx - 1];
+            _openInvoiceList[agent][idx - 1] = lastInvoiceId;
+            _openInvoiceIndex[agent][lastInvoiceId] = idx;
+        }
+        _openInvoiceList[agent].pop();
+        _openInvoiceIndex[agent][invoiceId] = 0;
     }
 
     function _rejectionReason(uint256 invoiceId, Invoice storage invoice, address agent)

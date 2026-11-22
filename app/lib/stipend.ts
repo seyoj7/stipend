@@ -9,7 +9,7 @@ export const aevum = defineChain({
 });
 
 export const stipendAddress = getAddress(
-  process.env.NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS ?? "0x812c046D4D93489fbD955c584CEC8d2b4b0aa97C",
+  process.env.NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS ?? "0xa05f94c4D521e69771Dd6bF75aafDE08d431812e",
 );
 export const tusd8Address = getAddress("0x456569838f1d43009A91ebA4263147Afd7233483");
 export const stipendDeploymentBlock = 3_756_025n;
@@ -49,6 +49,8 @@ export const stipendAbi = [
   { type: "event", name: "AgentReinstated", anonymous: false, inputs: [{ name: "payer", type: "address", indexed: true }, { name: "agent", type: "address", indexed: true }] },
   { type: "event", name: "SpentReset", anonymous: false, inputs: [{ name: "payer", type: "address", indexed: true }, { name: "agent", type: "address", indexed: true }] },
   { type: "event", name: "ExcessSwept", anonymous: false, inputs: [{ name: "payer", type: "address", indexed: true }, { name: "amount", type: "uint256", indexed: false }] },
+  { type: "function", name: "getApprovedMerchants", stateMutability: "view", inputs: [{ name: "agent", type: "address" }], outputs: [{ name: "", type: "address[]" }] },
+  { type: "function", name: "getOpenInvoices", stateMutability: "view", inputs: [{ name: "agent", type: "address" }, { name: "offset", type: "uint256" }, { name: "limit", type: "uint256" }], outputs: [{ name: "ids", type: "uint256[]" }, { name: "total", type: "uint256" }] },
 ] as const;
 
 export const tokenAbi = [

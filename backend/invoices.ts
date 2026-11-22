@@ -10,94 +10,41 @@ export type OpenInvoice = {
   amount: bigint;
 };
 
-const STIPEND_DEPLOYMENT_BLOCK = 3_756_025n;
-const LOG_BLOCK_CHUNK_SIZE = 1_000n;
-
-type InvoiceCache = {
-  scannedThrough: bigint;
-  openInvoices: Map<bigint, OpenInvoice>;
-  scan?: Promise<void>;
-};
-
-type InvoiceCacheGlobal = typeof globalThis & {
-  __stipendInvoiceCaches?: Map<string, InvoiceCache>;
-};
-
-const invoiceCaches = ((globalThis as InvoiceCacheGlobal).__stipendInvoiceCaches ??=
-  new Map<string, InvoiceCache>());
+const PAGE_SIZE = 50n;
 
 export async function getOpenInvoices(forAgent?: Address): Promise<OpenInvoice[]> {
-  const agentFilter = forAgent ?? getAgentAccount().address;
-  const cacheKey = `${STIPEND_ADDRESS.toLowerCase()}:${agentFilter.toLowerCase()}`;
-  let cache = invoiceCaches.get(cacheKey);
-  if (!cache) {
-    cache = { scannedThrough: STIPEND_DEPLOYMENT_BLOCK - 1n, openInvoices: new Map() };
-    invoiceCaches.set(cacheKey, cache);
-  }
+  const agentAddress = forAgent ?? getAgentAccount().address;
+  const result: OpenInvoice[] = [];
+  let offset = 0n;
 
   while (true) {
-    const latestBlock = await publicClient.getBlockNumber();
-    if (cache.scannedThrough >= latestBlock) break;
-    if (cache.scan) {
-      await cache.scan;
-      continue;
+    const [ids, total] = await publicClient.readContract({
+      address: STIPEND_ADDRESS,
+      abi: stipendAbi,
+      functionName: "getOpenInvoices",
+      args: [agentAddress, offset, PAGE_SIZE],
+    });
+
+    for (const id of ids) {
+      const invoiceData = await publicClient.readContract({
+        address: STIPEND_ADDRESS,
+        abi: stipendAbi,
+        functionName: "invoices",
+        args: [id],
+      });
+      result.push({
+        id,
+        merchant: getAddress(invoiceData[0]),
+        agent: getAddress(invoiceData[1]),
+        amount: invoiceData[2],
+      });
     }
 
-    cache.scan = (async () => {
-      const scanTo = await publicClient.getBlockNumber();
-      for (let fromBlock = cache!.scannedThrough + 1n; fromBlock <= scanTo; fromBlock += LOG_BLOCK_CHUNK_SIZE) {
-        const toBlock = fromBlock + LOG_BLOCK_CHUNK_SIZE - 1n < scanTo
-          ? fromBlock + LOG_BLOCK_CHUNK_SIZE - 1n
-          : scanTo;
-        const [createdEvents, paidEvents] = await Promise.all([
-          publicClient.getContractEvents({
-            address: STIPEND_ADDRESS,
-            abi: stipendAbi,
-            eventName: "InvoiceCreated",
-            args: { agent: agentFilter },
-            fromBlock,
-            toBlock,
-          }),
-          publicClient.getContractEvents({
-            address: STIPEND_ADDRESS,
-            abi: stipendAbi,
-            eventName: "InvoicePaid",
-            args: { agent: agentFilter },
-            fromBlock,
-            toBlock,
-          }),
-        ]);
-
-        for (const event of createdEvents) {
-          const id = event.args.invoiceId;
-          if (id === undefined) continue;
-          const invoice = await publicClient.readContract({
-            address: STIPEND_ADDRESS, abi: stipendAbi, functionName: "invoices", args: [id],
-          });
-          if (invoice[3]) continue;
-          const agent = getAddress(invoice[1]);
-          cache!.openInvoices.set(id, {
-            id,
-            merchant: getAddress(invoice[0]),
-            agent,
-            amount: invoice[2],
-          });
-        }
-        for (const event of paidEvents) {
-          const id = event.args.invoiceId;
-          if (id !== undefined) cache!.openInvoices.delete(id);
-        }
-        cache!.scannedThrough = toBlock;
-      }
-    })();
-    try {
-      await cache.scan;
-    } finally {
-      cache.scan = undefined;
-    }
+    offset += PAGE_SIZE;
+    if (offset >= total) break;
   }
 
-  return [...cache.openInvoices.values()];
+  return result;
 }
 
 export async function getAgentOpenInvoices() {

@@ -117,6 +117,23 @@ export const stipendAbi = [
       { name: "reason", type: "uint8", indexed: false },
     ],
   },
+  {
+    type: "function", name: "getApprovedMerchants", stateMutability: "view",
+    inputs: [{ name: "agent", type: "address" }],
+    outputs: [{ name: "", type: "address[]" }],
+  },
+  {
+    type: "function", name: "getOpenInvoices", stateMutability: "view",
+    inputs: [
+      { name: "agent", type: "address" },
+      { name: "offset", type: "uint256" },
+      { name: "limit", type: "uint256" },
+    ],
+    outputs: [
+      { name: "ids", type: "uint256[]" },
+      { name: "total", type: "uint256" },
+    ],
+  },
 ] as const;
 
 export const publicClient = createPublicClient({ chain: aevum, transport: http() });

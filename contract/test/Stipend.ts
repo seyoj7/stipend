@@ -379,4 +379,176 @@ describe("Stipend", () => {
     ));
     assert.deepEqual(await stipend.read.policies([agent.account.address]), before);
   });
+
+  // --- Merchant list tests ---
+
+  it("returns approved merchants via getApprovedMerchants", async () => {
+    await stipend.write.addMerchant([agent.account.address, merchant.account.address]);
+    await stipend.write.addMerchant([agent.account.address, otherMerchant.account.address]);
+    const merchants = await stipend.read.getApprovedMerchants([agent.account.address]);
+    assert.equal(merchants.length, 2);
+    const set = new Set(merchants.map((m: string) => m.toLowerCase()));
+    assert.ok(set.has(merchant.account.address.toLowerCase()));
+    assert.ok(set.has(otherMerchant.account.address.toLowerCase()));
+  });
+
+  it("removes a merchant from getApprovedMerchants when removeMerchant is called", async () => {
+    await stipend.write.addMerchant([agent.account.address, merchant.account.address]);
+    await stipend.write.addMerchant([agent.account.address, otherMerchant.account.address]);
+    await stipend.write.removeMerchant([agent.account.address, merchant.account.address]);
+    const merchants = await stipend.read.getApprovedMerchants([agent.account.address]);
+    assert.equal(merchants.length, 1);
+    assert.equal(merchants[0].toLowerCase(), otherMerchant.account.address.toLowerCase());
+  });
+
+  it("allows re-adding a merchant after removal", async () => {
+    await stipend.write.addMerchant([agent.account.address, merchant.account.address]);
+    await stipend.write.removeMerchant([agent.account.address, merchant.account.address]);
+    const afterRemove = await stipend.read.getApprovedMerchants([agent.account.address]);
+    assert.equal(afterRemove.length, 0);
+    await stipend.write.addMerchant([agent.account.address, merchant.account.address]);
+    const afterReAdd = await stipend.read.getApprovedMerchants([agent.account.address]);
+    assert.equal(afterReAdd.length, 1);
+    assert.equal(afterReAdd[0].toLowerCase(), merchant.account.address.toLowerCase());
+  });
+
+  it("removing the first of three merchants leaves the other two", async () => {
+    const wallets = await viem.getWalletClients();
+    const [, , m1, m2, m3] = wallets;
+    await stipend.write.addMerchant([agent.account.address, m1.account.address]);
+    await stipend.write.addMerchant([agent.account.address, m2.account.address]);
+    await stipend.write.addMerchant([agent.account.address, m3.account.address]);
+    await stipend.write.removeMerchant([agent.account.address, m1.account.address]);
+    const merchants = await stipend.read.getApprovedMerchants([agent.account.address]);
+    assert.equal(merchants.length, 2);
+    const set = new Set(merchants.map((m: string) => m.toLowerCase()));
+    assert.ok(set.has(m2.account.address.toLowerCase()));
+    assert.ok(set.has(m3.account.address.toLowerCase()));
+    assert.ok(!set.has(m1.account.address.toLowerCase()));
+  });
+
+  it("removing the last of three merchants leaves the first two in order", async () => {
+    const wallets = await viem.getWalletClients();
+    const [, , m1, m2, m3] = wallets;
+    await stipend.write.addMerchant([agent.account.address, m1.account.address]);
+    await stipend.write.addMerchant([agent.account.address, m2.account.address]);
+    await stipend.write.addMerchant([agent.account.address, m3.account.address]);
+    await stipend.write.removeMerchant([agent.account.address, m3.account.address]);
+    const merchants = await stipend.read.getApprovedMerchants([agent.account.address]);
+    assert.equal(merchants.length, 2);
+    assert.equal(merchants[0].toLowerCase(), m1.account.address.toLowerCase());
+    assert.equal(merchants[1].toLowerCase(), m2.account.address.toLowerCase());
+  });
+
+  it("removing the middle of three merchants swaps the last into its slot", async () => {
+    const wallets = await viem.getWalletClients();
+    const [, , m1, m2, m3] = wallets;
+    await stipend.write.addMerchant([agent.account.address, m1.account.address]);
+    await stipend.write.addMerchant([agent.account.address, m2.account.address]);
+    await stipend.write.addMerchant([agent.account.address, m3.account.address]);
+    await stipend.write.removeMerchant([agent.account.address, m2.account.address]);
+    const merchants = await stipend.read.getApprovedMerchants([agent.account.address]);
+    assert.equal(merchants.length, 2);
+    // After removing m2 (index 1), m3 swaps in: [m1, m3]
+    assert.equal(merchants[0].toLowerCase(), m1.account.address.toLowerCase());
+    assert.equal(merchants[1].toLowerCase(), m3.account.address.toLowerCase());
+  });
+
+  it("add-remove-add cycle across two agents keeps lists independent", async () => {
+    await stipend.write.addMerchant([agent.account.address, merchant.account.address]);
+    await stipend.write.addMerchant([agentB.account.address, otherMerchant.account.address]);
+    await stipend.write.removeMerchant([agent.account.address, merchant.account.address]);
+    await stipend.write.addMerchant([agent.account.address, merchant.account.address]);
+    const listA = await stipend.read.getApprovedMerchants([agent.account.address]);
+    const listB = await stipend.read.getApprovedMerchants([agentB.account.address]);
+    assert.equal(listA.length, 1);
+    assert.equal(listA[0].toLowerCase(), merchant.account.address.toLowerCase());
+    assert.equal(listB.length, 1);
+    assert.equal(listB[0].toLowerCase(), otherMerchant.account.address.toLowerCase());
+  });
+
+  it("returns an empty list for an agent with no merchants", async () => {
+    const merchants = await stipend.read.getApprovedMerchants([agent.account.address]);
+    assert.equal(merchants.length, 0);
+  });
+
+  // --- Open invoice list tests ---
+
+  it("tracks open invoices via getOpenInvoices and removes them on payment", async () => {
+    await fundVault();
+    await configure();
+    const id1 = await invoice(1);
+    const id2 = await invoice(2);
+    const id3 = await invoice(3);
+    const [beforeIds, beforeTotal] = await stipend.read.getOpenInvoices([agent.account.address, 0n, 100n]);
+    assert.equal(beforeTotal, 3n);
+    assert.equal(beforeIds.length, 3);
+    assert.ok(beforeIds.includes(id1));
+    assert.ok(beforeIds.includes(id2));
+    assert.ok(beforeIds.includes(id3));
+
+    await pay(id2);
+
+    const [afterIds, afterTotal] = await stipend.read.getOpenInvoices([agent.account.address, 0n, 100n]);
+    assert.equal(afterTotal, 2n);
+    assert.ok(afterIds.includes(id1));
+    assert.ok(!afterIds.includes(id2));
+    assert.ok(afterIds.includes(id3));
+  });
+
+  it("paginates open invoices with offset and limit", async () => {
+    await fundVault();
+    await configure();
+    const ids: bigint[] = [];
+    for (let i = 0; i < 5; i++) {
+      ids.push(await invoice(1));
+    }
+    const [page1, total1] = await stipend.read.getOpenInvoices([agent.account.address, 0n, 2n]);
+    assert.equal(total1, 5n);
+    assert.equal(page1.length, 2);
+    const [page2, total2] = await stipend.read.getOpenInvoices([agent.account.address, 2n, 2n]);
+    assert.equal(total2, 5n);
+    assert.equal(page2.length, 2);
+    const [page3, total3] = await stipend.read.getOpenInvoices([agent.account.address, 4n, 2n]);
+    assert.equal(total3, 5n);
+    assert.equal(page3.length, 1);
+    // All IDs should be unique across pages
+    const all = [...page1, ...page2, ...page3];
+    assert.equal(new Set(all.map((x: bigint) => x.toString())).size, 5);
+  });
+
+  it("returns empty page when offset exceeds total open invoices", async () => {
+    await fundVault();
+    await configure();
+    await invoice(1);
+    const [ids, total] = await stipend.read.getOpenInvoices([agent.account.address, 10n, 5n]);
+    assert.equal(total, 1n);
+    assert.equal(ids.length, 0);
+  });
+
+  it("open invoice list is scoped per agent", async () => {
+    await fundVault();
+    await configure();
+    await stipend.write.addMerchant([agentB.account.address, merchant.account.address]);
+    const now = await publicClient.getBlock();
+    await stipend.write.setPolicy([agentB.account.address, units(100), units(100), units(100), now.timestamp + 86_400n]);
+    const idA = await invoice(1, merchant, agent);
+    const idB = await invoice(2, merchant, agentB);
+    const [idsA] = await stipend.read.getOpenInvoices([agent.account.address, 0n, 100n]);
+    const [idsB] = await stipend.read.getOpenInvoices([agentB.account.address, 0n, 100n]);
+    assert.equal(idsA.length, 1);
+    assert.equal(idsA[0], idA);
+    assert.equal(idsB.length, 1);
+    assert.equal(idsB[0], idB);
+  });
+
+  it("rejected payment does not remove invoice from the open list", async () => {
+    await fundVault(5);
+    await configure({ budget: 100, cap: 100, daily: 100 });
+    const id = await invoice(6); // exceeds vault balance → will be rejected
+    await assertRejected(id, 8);
+    const [ids, total] = await stipend.read.getOpenInvoices([agent.account.address, 0n, 100n]);
+    assert.equal(total, 1n);
+    assert.equal(ids[0], id);
+  });
 });

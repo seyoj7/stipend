@@ -47,7 +47,7 @@ All of these functions are restricted to the payer:
 
 ## Tests
 
-The Hardhat 3 `node:test` suite is in [`test/Stipend.ts`](test/Stipend.ts) and contains **32 test cases** covering payment checks, payer-only access, policy updates, agent reinstatement and spending reset, vault accounting, merchant changes, and token edge cases.
+The Hardhat 3 `node:test` suite is in [`test/Stipend.ts`](test/Stipend.ts) and contains **45 test cases** covering payment checks, payer-only access, policy updates, agent reinstatement and spending reset, vault accounting, merchant changes, token edge cases, merchant list tracking (add/remove/re-add ordering, per-agent independence), and open invoice list tracking (creation, payment removal, pagination, per-agent scoping).
 
 Run the suite from this directory:
 

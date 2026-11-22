@@ -47,7 +47,7 @@ flowchart LR
 
 | Item             | Value                                                                                                                              |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Stipend contract | [`0x812c046D4D93489fbD955c584CEC8d2b4b0aa97C`](https://explorer-test.qday.info/address/0x812c046D4D93489fbD955c584CEC8d2b4b0aa97C) |
+| Stipend contract | [`0xa05f94c4D521e69771Dd6bF75aafDE08d431812e`](https://explorer-test.qday.info/address/0xa05f94c4D521e69771Dd6bF75aafDE08d431812e) |
 | Network          | Aevum Testnet (chain 44005)                                                                                                        |
 | Explorer         | [explorer-test.qday.info](https://explorer-test.qday.info)                                                                         |
 
@@ -101,8 +101,10 @@ The test suite ([`contract/test/Stipend.ts`](contract/test/Stipend.ts)) uses Har
 - Resetting spent without changing revocation and reinstating a revoked agent
 - Sweeping only unaccounted excess tokens
 - Additional policy validation, vault accounting, merchant-removal, daily-reset, and fee-on-transfer token cases
+- Merchant list tracking: add, remove, re-add, swap-and-pop ordering, per-agent independence, and empty-list edge case
+- Open invoice list tracking: creation adds to list, payment removes, pagination, offset past total, per-agent scoping, and rejected payments keeping invoices in list
 
-The suite contains **32 test cases** in [`contract/test/Stipend.ts`](contract/test/Stipend.ts).
+The suite contains **45 test cases** in [`contract/test/Stipend.ts`](contract/test/Stipend.ts).
 
 ## Frontend pages
 
