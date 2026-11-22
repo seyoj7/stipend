@@ -3,7 +3,7 @@
 import "./page.css";
 import { useCallback, useEffect, useState } from "react";
 import { formatUnits, parseUnits } from "viem";
-import { useAccount, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { PageHeader } from "@/app/components/PageHeader";
 import { StatusPill } from "@/app/components/StatusPill";
 import { TransactionFeedback } from "@/app/components/TransactionFeedback";
@@ -18,11 +18,17 @@ export default function InvoicesPage() {
   const { agent, error: agentError } = useAgentAddress();
   const tx = useTransaction();
   const { writeContractAsync } = useWriteContract();
+  const merchantApproval = useReadContract({ address: stipendAddress, abi: stipendAbi, functionName: "allowedMerchant", args: [agent ?? "0x0000000000000000000000000000000000000000", address ?? "0x0000000000000000000000000000000000000000"], query: { enabled: Boolean(agent && address) } });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [amount, setAmount] = useState("");
   const canWrite = isConnected && chainId === aevum.id;
+  const unapprovedMerchant = "Your wallet is not an approved merchant for this agent. Ask the payer to add it.";
+
+  useEffect(() => {
+    if (agent && address) void merchantApproval.refetch();
+  }, [address, agent]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -59,10 +65,11 @@ export default function InvoicesPage() {
           <div className="invoice-agent-target"><span>INVOICE RECIPIENT</span><code>{agent ?? "Loading agent address…"}</code></div>
           <label className="field-label invoice-amount-field">Invoice amount<input className="field" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="0.000001" step="0.01" placeholder="0.00" /><small>tUSD8 · 6 decimals</small></label>
           <div className="invoice-merchant-note"><span>↳</span><p>The connected wallet becomes the merchant on-chain.<br /><b>{address ?? "Connect a wallet to create an invoice"}</b></p></div>
-          <button className="button button-primary invoice-submit" disabled={!canWrite || !agent || !amount || tx.status === "pending"} onClick={createInvoice}>{tx.status === "pending" ? "Creating invoice…" : "Create invoice"}<span>→</span></button>
+          <button className="button button-primary invoice-submit" disabled={!canWrite || !agent || !amount || merchantApproval.data === false || merchantApproval.isLoading || tx.status === "pending"} onClick={createInvoice}>{tx.status === "pending" ? "Creating invoice…" : "Create invoice"}<span>→</span></button>
+          {merchantApproval.data === false && <div className="invoice-help warn">{unapprovedMerchant}</div>}
           {!isConnected && <div className="invoice-help">Connect a merchant wallet to create an invoice.</div>}
           {isConnected && chainId !== aevum.id && <div className="invoice-help warn">Switch to Aevum Testnet before creating invoices.</div>}
-          <TransactionFeedback state={tx} />
+          <TransactionFeedback state={tx.message?.toLowerCase().includes("merchant not approved") ? { ...tx, message: unapprovedMerchant } : tx} />
         </section>
         <section className="card invoice-side-info"><div className="eyebrow">PAYMENT FLOW</div><h2>Built-in guardrails.</h2><p>Each invoice is checked by the Stipend contract when the agent submits payment.</p><div className="invoice-guard"><span>01</span><div><b>Merchant approval</b><small>Only wallets on the payer’s allowlist.</small></div><i>✓</i></div><div className="invoice-guard"><span>02</span><div><b>Spend limits</b><small>Per-payment, daily, and total budget.</small></div><i>✓</i></div><div className="invoice-guard"><span>03</span><div><b>Permission window</b><small>Revoked and expired policies stop payment.</small></div><i>✓</i></div></section>
       </div>

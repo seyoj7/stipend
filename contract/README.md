@@ -1,57 +1,64 @@
-# Sample Hardhat 3 Project (`node:test` and `viem`)
+# Stipend smart contract
 
-This project showcases a Hardhat 3 project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+Stipend is a single-payer tUSD8 vault that gives an agent a bounded permission to pay invoices on Aevum Testnet (chain ID 44005). The contract source is [`contracts/stipend.sol`](contracts/stipend.sol); it uses OpenZeppelin `SafeERC20`, `ReentrancyGuard`, and `Pausable`.
 
-To learn more about Hardhat 3, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3](https://hardhat.org/hardhat3-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## Roles and workflow
 
-## Project Overview
+- **Payer:** The wallet that deploys the contract. It funds and manages the vault and controls each agent policy.
+- **Agent:** A wallet with a per-agent policy. It can call `payInvoice` for invoices assigned to its own address; it cannot withdraw funds or change its policy.
+- **Merchant:** A wallet approved for a specific agent. It creates invoices for that agent, and receives tUSD8 when an invoice is paid.
 
-This example project includes:
+The payer deposits tUSD8, sets an agent's total budget, per-payment cap, daily limit, and expiry, and approves merchants. An approved merchant calls `createInvoice(agent, amount)`. The contract records the caller as the invoice merchant and rejects the call unless `allowedMerchant[agent][msg.sender]` is true. The agent then calls `payInvoice(invoiceId)`. The contract checks the policy, merchant approval, invoice status, pause state, and vault balance before transferring funds.
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](https://nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+Rejected payment checks emit `PaymentRejected` with a `RejectionReason` and return `false`. A successful payment emits `InvoicePaid`. Daily spend is tracked by UTC day (`block.timestamp / 1 days`).
 
-## Usage
+## Payer controls
 
-### Running Tests
+All of these functions are restricted to the payer:
 
-To run all the tests in the project, execute the following command:
+| Function | Effect |
+| --- | --- |
+| `deposit(amount)` | Transfers tUSD8 into the vault and increases `vaultBalance`. |
+| `withdraw(amount)` | Withdraws up to the accounted `vaultBalance` to the payer. |
+| `sweepExcess()` | Sends tokens held above `vaultBalance` to the payer. Reverts if there is no excess. |
+| `setPolicy(agent, totalBudget, perPaymentCap, dailyLimit, expiry)` | Sets or updates limits and expiry. It preserves `spent` and `revoked`; it does not reset spending or reinstate an agent. |
+| `addMerchant(agent, merchant)` / `removeMerchant(agent, merchant)` | Adds or removes a merchant from that agent's allowlist. |
+| `revoke(agent)` / `reinstate(agent)` | Revokes or restores the agent's permission. Restoring does not change its limits or spent total. |
+| `resetSpent(agent)` | Sets the agent's lifetime `spent` counter to zero. It does not clear daily spend or change the revoked flag. |
+| `pause()` / `unpause()` | Pauses or resumes invoice payments for the entire vault. |
 
-```shell
+## Rejection reasons
+
+`PaymentRejected.reason` is a `uint8` enum value in this order:
+
+| Value | Reason | Meaning |
+| ---: | --- | --- |
+| 0 | `None` | No rejection; payment can proceed. |
+| 1 | `Revoked` | Agent permission is revoked. |
+| 2 | `Expired` | The policy is expired or has no expiry. |
+| 3 | `MerchantNotAllowed` | The invoice merchant is not approved for the agent. |
+| 4 | `PaymentCapExceeded` | The invoice exceeds the per-payment cap. |
+| 5 | `BudgetExceeded` | The invoice would exceed the total budget. |
+| 6 | `DailyLimitExceeded` | The invoice would exceed the daily limit. |
+| 7 | `InvoiceAlreadyPaid` | The invoice has already been paid. |
+| 8 | `InsufficientVaultBalance` | The vault does not hold enough accounted tUSD8. |
+| 9 | `WrongAgent` | The caller is not the agent assigned to the invoice. |
+| 10 | `InvoiceNotFound` | The invoice ID has no recorded invoice. |
+
+## Tests
+
+The Hardhat 3 `node:test` suite is in [`test/Stipend.ts`](test/Stipend.ts) and contains **32 test cases** covering payment checks, payer-only access, policy updates, agent reinstatement and spending reset, vault accounting, merchant changes, and token edge cases.
+
+Run the suite from this directory:
+
+```bash
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `node:test` tests:
+## Deployment
 
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
-```
+The Hardhat network is configured in [`hardhat.config.ts`](hardhat.config.ts). Deploy to Aevum Testnet with a configured `AEVUM_PRIVATE_KEY`:
 
-### Make a deployment to Sepolia
-
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
+```bash
+npx hardhat ignition deploy ignition/modules/deploy.ts --network aevum
 ```

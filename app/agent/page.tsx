@@ -11,6 +11,13 @@ import { aevum, stipendAbi, stipendAddress } from "@/app/lib/stipend";
 
 type Decision = { invoiceId: string; merchant?: Address; amount?: string; decision: "blocked" | "paid" | "rejected" | "error"; reason?: string; transactionHash?: string };
 type Invoice = { id: string; merchant: Address; agent: Address; amountUsd: string };
+const rejectionReasonLabels = ["None", "Revoked", "Expired", "Merchant not allowed", "Payment cap exceeded", "Budget exceeded", "Daily limit exceeded", "Invoice already paid", "Insufficient vault balance", "Wrong agent", "Invoice not found"];
+function reasonLabel(reason?: string) {
+  if (!reason) return undefined;
+  if (/^\d+$/.test(reason)) return rejectionReasonLabels[Number(reason)];
+  if (reason === "InvoiceNotFound" || reason === "invoice_not_found") return rejectionReasonLabels[10];
+  return reason.replaceAll("_", " ");
+}
 
 export default function AgentPage() {
   const { address, chainId, isConnected } = useAccount();
@@ -80,7 +87,7 @@ export default function AgentPage() {
       </section>
       <section className="agent-stats-row"><article className="card agent-stat"><span className="agent-stat-icon waiting">◷</span><div><small>OPEN INVOICES</small><b>{invoices.length}</b><span>Waiting for review</span></div></article><article className="card agent-stat"><span className="agent-stat-icon paid">✓</span><div><small>PAID THIS RUN</small><b>{paidCount}</b><span>Settled on Aevum</span></div></article><article className="card agent-stat"><span className="agent-stat-icon blocked">⊘</span><div><small>BLOCKED THIS RUN</small><b>{blockedCount}</b><span>Outside policy limits</span></div></article></section>
       <section className="card agent-log-card"><div className="agent-log-heading"><div><h2>Decision log</h2><p>Each invoice receives an explicit policy check.</p></div><StatusPill tone="neutral">{decisions.length} decisions</StatusPill></div>
-        {decisions.length ? <div className="decision-list">{decisions.map((decision, index) => <div className="decision-row" key={`${decision.invoiceId}-${index}`}><span className={`decision-mark ${decision.decision}`}>{decision.decision === "paid" ? "✓" : decision.decision === "blocked" || decision.decision === "rejected" ? "⊘" : "!"}</span><div className="decision-details"><b>{decision.decision === "paid" ? `Paid invoice #${decision.invoiceId}` : decision.decision === "blocked" ? `Blocked invoice #${decision.invoiceId}` : decision.decision === "rejected" ? `Rejected invoice #${decision.invoiceId}` : `Payment error · invoice #${decision.invoiceId}`}</b><small>{decision.reason?.replaceAll("_", " ") ?? `Paid ${decision.amount ? (Number(decision.amount) / 1_000_000).toFixed(2) : ""} tUSD8 to ${decision.merchant ?? "merchant"}`}</small></div>{decision.transactionHash && <a href={`https://explorer-test.qday.info/tx/${decision.transactionHash}`} target="_blank" rel="noreferrer">View tx ↗</a>}</div>)}</div> : <div className="agent-empty"><span>✳</span><b>No decisions yet</b><p>Run the agent to evaluate open invoices against your active policy.</p></div>}
+        {decisions.length ? <div className="decision-list">{decisions.map((decision, index) => <div className="decision-row" key={`${decision.invoiceId}-${index}`}><span className={`decision-mark ${decision.decision}`}>{decision.decision === "paid" ? "✓" : decision.decision === "blocked" || decision.decision === "rejected" ? "⊘" : "!"}</span><div className="decision-details"><b>{decision.decision === "paid" ? `Paid invoice #${decision.invoiceId}` : decision.decision === "blocked" ? `Blocked invoice #${decision.invoiceId}` : decision.decision === "rejected" ? `Rejected invoice #${decision.invoiceId}` : `Payment error · invoice #${decision.invoiceId}`}</b><small>{reasonLabel(decision.reason) ?? `Paid ${decision.amount ? (Number(decision.amount) / 1_000_000).toFixed(2) : ""} tUSD8 to ${decision.merchant ?? "merchant"}`}</small></div>{decision.transactionHash && <a href={`https://explorer-test.qday.info/tx/${decision.transactionHash}`} target="_blank" rel="noreferrer">View tx ↗</a>}</div>)}</div> : <div className="agent-empty"><span>✳</span><b>No decisions yet</b><p>Run the agent to evaluate open invoices against your active policy.</p></div>}
       </section>
       <div className="agent-sign-note"><span>◈</span> Your payer wallet authorizes the run. The agent’s signing key stays on the server.</div>
     </div>

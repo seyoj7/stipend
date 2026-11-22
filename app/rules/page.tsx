@@ -205,6 +205,7 @@ export default function RulesPage() {
             <div className="policy-summary"><span>✳</span><p>Agent may spend up to <b>{budget || "0"} tUSD8 total</b>, no more than <b>{cap || "0"} tUSD8 per payment</b>, and up to <b>{daily || "0"} tUSD8 per day</b>. Permission expires in <b>{days || "0"} days</b>.</p></div>
             {formError && <div className="danger-box rules-error">{formError}</div>}
             <button className="button button-primary" disabled={!canWrite || !agent || tx.status === "pending"} onClick={savePolicy}>{tx.status === "pending" ? "Saving…" : "Save spending rules"}<span>→</span></button>
+            <p className="muted tiny">Saving updates the limits only. It does not reset spending or re-enable a revoked agent.</p>
           </section>
           <section className="card card-pad merchant-section"><div className="rules-section-title"><span className="rules-number">02</span><div><h2 className="section-label">Approved merchants</h2><p className="muted tiny">Invoices from other wallets will be rejected.</p></div></div>
             <div className="merchant-input-row"><input className="field" value={merchantInput} onChange={(e) => setMerchantInput(e.target.value)} placeholder="Merchant wallet address · 0x…" /><button className="button" disabled={!canWrite || !agent || tx.status === "pending"} onClick={addMerchant}>＋ Add merchant</button></div>

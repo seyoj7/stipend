@@ -12,11 +12,11 @@ Stipend is a spending wallet for AI agents. You deposit tUSD8 into a vault and g
 
 1. **Fund the vault.** The payer deposits tUSD8 into the Stipend contract.
 2. **Set the rules.** For one agent address: a total budget, a per-payment cap, a daily limit, an expiry, and a list of approved merchants.
-3. **Merchants send invoices.** A merchant calls `createInvoice` on the contract, naming the agent and the amount.
+3. **Merchants send invoices.** A merchant wallet must first be on that agent's approved-merchant allowlist. It then calls `createInvoice(agent, amount)`; unapproved wallets are rejected.
 4. **The agent pays.** The agent calls `payInvoice`. The contract checks every rule.
    - **Pass:** tUSD8 moves from the vault straight to the merchant and `InvoicePaid` is emitted.
    - **Fail:** nothing moves and `PaymentRejected` is emitted with a reason code.
-5. **Stay in control.** The payer can revoke the agent, pause the vault, or withdraw funds at any time.
+5. **Stay in control.** The payer can revoke or reinstate the agent, reset its lifetime spent counter, pause the vault, withdraw accounted funds, or sweep tokens sent directly to the contract above its accounted balance.
 
 There is no database. The blockchain is the source of truth.
 
@@ -57,16 +57,17 @@ The [`Stipend`](contract/contracts/stipend.sol) contract is a single-payer vault
 
 ### Key concepts
 
-- **Payer** — the wallet that deploys and owns the vault. Only the payer can deposit, withdraw, set policies, approve merchants, revoke agents, or pause the contract.
-- **Policy** — per-agent spending rules stored on-chain: `totalBudget`, `perPaymentCap`, `dailyLimit`, `expiry`, `spent`, and `revoked`.
+- **Payer** — the wallet that deploys and owns the vault. Only the payer can deposit, withdraw, sweep excess tokens, set policies, approve merchants, revoke or reinstate agents, reset an agent's spent counter, or pause and unpause the contract.
+- **Policy** — per-agent spending rules stored on-chain: `totalBudget`, `perPaymentCap`, `dailyLimit`, `expiry`, `spent`, and `revoked`. Updating limits preserves `spent` and `revoked`; use `resetSpent(agent)` or `reinstate(agent)` explicitly for those actions.
 - **Merchant allowlist** — a mapping of `(agent, merchant) → bool`. Only approved merchants can be paid.
-- **Invoice** — created by a merchant on-chain with `createInvoice(agent, amount)`. The caller is recorded as the merchant.
+- **Invoice** — created by an approved merchant with `createInvoice(agent, amount)`. The caller is recorded as the merchant; the transaction reverts unless that caller is approved for the specified agent.
 - **Payment** — the agent calls `payInvoice(invoiceId)`. The contract runs through every rejection check before moving tokens.
 
 ### Rejection reasons
 
 | Code                       | Reason                                        |
 | -------------------------- | --------------------------------------------- |
+| `None`                     | No rejection; payment can proceed             |
 | `Revoked`                  | Agent permission was revoked by the payer     |
 | `Expired`                  | Policy expiry timestamp has passed            |
 | `MerchantNotAllowed`       | Merchant is not on the agent's allowlist      |
@@ -76,6 +77,7 @@ The [`Stipend`](contract/contracts/stipend.sol) contract is a single-payer vault
 | `InvoiceAlreadyPaid`       | Invoice was already settled                   |
 | `InsufficientVaultBalance` | Vault does not hold enough tUSD8              |
 | `WrongAgent`               | Invoice is assigned to a different agent      |
+| `InvoiceNotFound`          | No invoice exists for the requested ID         |
 
 ### Contract tests
 
@@ -91,8 +93,16 @@ The test suite ([`contract/test/Stipend.ts`](contract/test/Stipend.ts)) uses Har
 - Rejecting payments from a revoked agent
 - Blocking payments while the vault is paused
 - Rejecting payments when vault balance is insufficient
+- Rejecting payments from the wrong agent and for nonexistent invoice IDs
 - Preventing the agent from withdrawing vault funds
 - Preventing the agent from modifying its own policy
+- Restricting payer-only actions, including `reinstate`, `resetSpent`, and `sweepExcess`
+- Preserving `spent` and `revoked` when updating a policy
+- Resetting spent without changing revocation and reinstating a revoked agent
+- Sweeping only unaccounted excess tokens
+- Additional policy validation, vault accounting, merchant-removal, daily-reset, and fee-on-transfer token cases
+
+The suite contains **32 test cases** in [`contract/test/Stipend.ts`](contract/test/Stipend.ts).
 
 ## Frontend pages
 

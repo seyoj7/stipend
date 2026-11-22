@@ -38,6 +38,24 @@ export default function DashboardPage() {
     } catch { /* Feedback is shown by the transaction panel. */ }
   }
 
+  async function reinstateAgent() {
+    if (!isPayer || !agent) return;
+    try {
+      await tx.execute(() => writeContractAsync({ address: stipendAddress, abi: stipendAbi, functionName: "reinstate", args: [agent] }), "Agent permission reinstated.");
+      await policy.refetch();
+    } catch { /* Feedback is shown by the transaction panel. */ }
+  }
+
+  async function resetSpent() {
+    if (!isPayer || !agent || !currentPolicy) return;
+    const spent = usd(currentPolicy[4]);
+    if (!window.confirm(`Current spent amount: ${spent} tUSD8. Reset spent will set it to 0. Continue?`)) return;
+    try {
+      await tx.execute(() => writeContractAsync({ address: stipendAddress, abi: stipendAbi, functionName: "resetSpent", args: [agent] }), "Agent spending total reset to zero.");
+      await policy.refetch();
+    } catch { /* Feedback is shown by the transaction panel. */ }
+  }
+
   async function toggleVaultPause() {
     if (!isPayer || paused.data === undefined) return;
     const functionName = paused.data ? "unpause" : "pause";
@@ -71,7 +89,7 @@ export default function DashboardPage() {
         </div>
       </section>
       <section className="dash-bottom-grid">
-        <article className="card card-pad"><div className="section-head"><div><h2 className="section-label">Agent wallet</h2><p className="muted tiny">The only address permitted to pay invoices.</p></div><StatusPill tone={agent ? "good" : "warning"}>{agent ? "Connected" : "Loading"}</StatusPill></div><div className="agent-address">{agent ?? "Loading agent address…"}</div><div className="address-caption">AGENT · AEVUM 44005</div><div className="divider" /><div className="agent-actions"><Link className="button button-quiet" href="/rules">Edit spending rules</Link><div className="agent-action-buttons"><button className="button button-danger" disabled={!isPayer || !agent || currentPolicy?.[5] || tx.status === "pending"} onClick={revokeAgent}>Revoke agent</button>{paused.data !== undefined && <button className={`button ${paused.data ? "button-primary" : "button-quiet"}`} disabled={!isPayer || tx.status === "pending"} onClick={toggleVaultPause}>{paused.data ? "Unpause vault" : "Pause vault"}</button>}</div></div><TransactionFeedback state={tx} />{isConnected && chainId !== aevum.id && <div className="tiny muted" style={{ marginTop: 10 }}>Switch to Aevum Testnet to send transactions.</div>}</article>
+        <article className="card card-pad"><div className="section-head"><div><h2 className="section-label">Agent wallet</h2><p className="muted tiny">The only address permitted to pay invoices.</p></div><StatusPill tone={agent ? "good" : "warning"}>{agent ? "Connected" : "Loading"}</StatusPill></div><div className="agent-address">{agent ?? "Loading agent address…"}</div><div className="address-caption">AGENT · AEVUM 44005</div><div className="divider" /><div className="agent-actions"><Link className="button button-quiet" href="/rules">Edit spending rules</Link><div className="agent-action-buttons"><button className="button button-danger" disabled={!isPayer || !agent || currentPolicy?.[5] || tx.status === "pending"} onClick={revokeAgent}>Revoke agent</button>{currentPolicy?.[5] && <button className="button button-primary" disabled={!isPayer || !agent || tx.status === "pending"} onClick={reinstateAgent}>Reinstate agent</button>}{currentPolicy && <button className="button button-quiet" disabled={!isPayer || !agent || tx.status === "pending"} onClick={resetSpent}>Reset spent</button>}{paused.data !== undefined && <button className={`button ${paused.data ? "button-primary" : "button-quiet"}`} disabled={!isPayer || tx.status === "pending"} onClick={toggleVaultPause}>{paused.data ? "Unpause vault" : "Pause vault"}</button>}</div></div><TransactionFeedback state={tx} />{isConnected && chainId !== aevum.id && <div className="tiny muted" style={{ marginTop: 10 }}>Switch to Aevum Testnet to send transactions.</div>}</article>
         <article className="card card-pad recent-card"><div className="section-head"><div><h2 className="section-label">Keep the limits clear.</h2><p className="muted tiny">Your agent stays inside the policy on every invoice.</p></div><span className="shield-icon">⌑</span></div><div className="limit-row"><span>Per payment cap</span><b>{usd(currentPolicy?.[1])} <small>tUSD8</small></b></div><div className="limit-row"><span>Daily spending</span><b>{usd(dailySpent.data)} <small>/ {usd(currentPolicy?.[2])}</small></b></div><div className="limit-row"><span>Approved merchants</span><b>Rules <span className="green-arrow">↗</span></b></div><Link className="button button-primary full-button" href="/invoices">Review invoices <span>→</span></Link></article>
       </section>
       <div className="dash-footnote"><span>◈</span> Funds remain in your vault. Revoke agent permission at any time.</div>

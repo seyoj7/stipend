@@ -28,6 +28,7 @@ function logDecision(decision: Decision) {
 }
 
 const RUN_SIGNATURE_WINDOW_SECONDS = 60;
+const TRANSACTION_RECEIPT_TIMEOUT_MS = 120_000;
 // This map only protects a single server instance; multi-instance deployments need a shared store.
 const usedRunSignatures = new Map<string, number>();
 let agentRunInProgress = false;
@@ -36,12 +37,6 @@ export async function runAgent(
   authorization: string | null,
   signedRequest?: { timestamp: number; signature: `0x${string}` },
 ) {
-  if (agentRunInProgress) {
-    return { status: 409, body: { error: "A run is already in progress" } };
-  }
-  agentRunInProgress = true;
-
-  try {
   const nowSeconds = Math.floor(Date.now() / 1000);
   for (const [signature, firstSeen] of usedRunSignatures) {
     if (nowSeconds - firstSeen > RUN_SIGNATURE_WINDOW_SECONDS) usedRunSignatures.delete(signature);
@@ -76,13 +71,19 @@ export async function runAgent(
     return { status: 401, body: { error: "Unauthorized" } };
   }
 
-  if (signedSignatureToRecord) {
-    if (usedRunSignatures.has(signedSignatureToRecord)) {
-      return { status: 401, body: { error: "Run request already used" } };
-    }
-    usedRunSignatures.set(signedSignatureToRecord, nowSeconds);
+  if (signedSignatureToRecord && usedRunSignatures.has(signedSignatureToRecord)) {
+    return { status: 401, body: { error: "Run request already used" } };
   }
 
+  // Check and set synchronously after authorization so unauthenticated callers
+  // cannot use the conflict response to observe whether an authorized run is active.
+  if (agentRunInProgress) {
+    return { status: 409, body: { error: "A run is already in progress" } };
+  }
+  agentRunInProgress = true;
+  if (signedSignatureToRecord) usedRunSignatures.set(signedSignatureToRecord, nowSeconds);
+
+  try {
   const { account, client: walletClient } = getAgentWalletClient();
   const discoveredInvoices = await getOpenInvoices(account.address);
   const approvals = new Map<string, boolean>();
@@ -176,7 +177,10 @@ export async function runAgent(
         functionName: "payInvoice",
         args: [invoice.id],
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash,
+        timeout: TRANSACTION_RECEIPT_TIMEOUT_MS,
+      });
       const events = parseEventLogs({
         abi: stipendAbi,
         logs: receipt.logs,
@@ -195,6 +199,17 @@ export async function runAgent(
       decisions.push(result);
       if (paid) spentThisRun += invoice.amount;
     } catch (error) {
+      if (error instanceof Error && error.name === "WaitForTransactionReceiptTimeoutError") {
+        return {
+          status: 504,
+          body: {
+            error: `Timed out waiting for invoice #${invoice.id} transaction confirmation.`,
+            agent: getAgentAccount().address,
+            processed: decisions.length,
+            decisions,
+          },
+        };
+      }
       const result: Decision = {
         invoiceId: invoice.id.toString(),
         merchant: invoice.merchant,
