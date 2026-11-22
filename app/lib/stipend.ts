@@ -44,8 +44,6 @@ export const stipendAbi = [
   { type: "function", name: "paused", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "bool" }] },
   { type: "event", name: "InvoicePaid", anonymous: false, inputs: [{ name: "invoiceId", type: "uint256", indexed: true }, { name: "agent", type: "address", indexed: true }, { name: "merchant", type: "address", indexed: true }, { name: "amount", type: "uint256", indexed: false }] },
   { type: "event", name: "InvoiceCreated", anonymous: false, inputs: [{ name: "invoiceId", type: "uint256", indexed: true }, { name: "merchant", type: "address", indexed: true }, { name: "agent", type: "address", indexed: true }, { name: "amount", type: "uint256", indexed: false }] },
-  { type: "event", name: "MerchantAdded", anonymous: false, inputs: [{ name: "agent", type: "address", indexed: true }, { name: "merchant", type: "address", indexed: true }] },
-  { type: "event", name: "MerchantRemoved", anonymous: false, inputs: [{ name: "agent", type: "address", indexed: true }, { name: "merchant", type: "address", indexed: true }] },
   { type: "event", name: "AgentReinstated", anonymous: false, inputs: [{ name: "payer", type: "address", indexed: true }, { name: "agent", type: "address", indexed: true }] },
   { type: "event", name: "SpentReset", anonymous: false, inputs: [{ name: "payer", type: "address", indexed: true }, { name: "agent", type: "address", indexed: true }] },
   { type: "event", name: "ExcessSwept", anonymous: false, inputs: [{ name: "payer", type: "address", indexed: true }, { name: "amount", type: "uint256", indexed: false }] },

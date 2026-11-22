@@ -3,8 +3,6 @@ import { timingSafeEqual } from "node:crypto";
 import { getAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-export const AEVUM_CHAIN_ID = 44_005;
-export const TUSD8_ADDRESS = getAddress("0x456569838f1d43009A91ebA4263147Afd7233483");
 export const STIPEND_ADDRESS = getAddress(
   process.env.STIPEND_CONTRACT_ADDRESS ?? "0xa05f94c4D521e69771Dd6bF75aafDE08d431812e",
 );

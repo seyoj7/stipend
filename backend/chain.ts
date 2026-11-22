@@ -12,19 +12,6 @@ export const aevum = defineChain({
 
 export const stipendAbi = [
   {
-    type: "event", name: "InvoiceCreated", anonymous: false,
-    inputs: [
-      { name: "invoiceId", type: "uint256", indexed: true },
-      { name: "merchant", type: "address", indexed: true },
-      { name: "agent", type: "address", indexed: true },
-      { name: "amount", type: "uint256", indexed: false },
-    ],
-  },
-  {
-    type: "function", name: "nextInvoiceId", stateMutability: "view",
-    inputs: [], outputs: [{ name: "", type: "uint256" }],
-  },
-  {
     type: "function", name: "payer", stateMutability: "view",
     inputs: [], outputs: [{ name: "", type: "address" }],
   },
@@ -64,63 +51,8 @@ export const stipendAbi = [
     inputs: [], outputs: [{ name: "", type: "bool" }],
   },
   {
-    type: "function", name: "reinstate", stateMutability: "nonpayable",
-    inputs: [{ name: "agent", type: "address" }], outputs: [],
-  },
-  {
-    type: "function", name: "resetSpent", stateMutability: "nonpayable",
-    inputs: [{ name: "agent", type: "address" }], outputs: [],
-  },
-  {
-    type: "function", name: "sweepExcess", stateMutability: "nonpayable",
-    inputs: [], outputs: [],
-  },
-  {
     type: "function", name: "payInvoice", stateMutability: "nonpayable",
     inputs: [{ name: "invoiceId", type: "uint256" }], outputs: [{ name: "", type: "bool" }],
-  },
-  {
-    type: "event", name: "InvoicePaid", anonymous: false,
-    inputs: [
-      { name: "invoiceId", type: "uint256", indexed: true },
-      { name: "agent", type: "address", indexed: true },
-      { name: "merchant", type: "address", indexed: true },
-      { name: "amount", type: "uint256", indexed: false },
-    ],
-  },
-  {
-    type: "event", name: "AgentReinstated", anonymous: false,
-    inputs: [
-      { name: "payer", type: "address", indexed: true },
-      { name: "agent", type: "address", indexed: true },
-    ],
-  },
-  {
-    type: "event", name: "SpentReset", anonymous: false,
-    inputs: [
-      { name: "payer", type: "address", indexed: true },
-      { name: "agent", type: "address", indexed: true },
-    ],
-  },
-  {
-    type: "event", name: "ExcessSwept", anonymous: false,
-    inputs: [
-      { name: "payer", type: "address", indexed: true },
-      { name: "amount", type: "uint256", indexed: false },
-    ],
-  },
-  {
-    type: "event", name: "PaymentRejected", anonymous: false,
-    inputs: [
-      { name: "invoiceId", type: "uint256", indexed: true },
-      { name: "agent", type: "address", indexed: true },
-      { name: "reason", type: "uint8", indexed: false },
-    ],
-  },
-  {
-    type: "function", name: "getApprovedMerchants", stateMutability: "view",
-    inputs: [{ name: "agent", type: "address" }],
-    outputs: [{ name: "", type: "address[]" }],
   },
   {
     type: "function", name: "getOpenInvoices", stateMutability: "view",
@@ -132,6 +64,23 @@ export const stipendAbi = [
     outputs: [
       { name: "ids", type: "uint256[]" },
       { name: "total", type: "uint256" },
+    ],
+  },
+  {
+    type: "event", name: "InvoicePaid", anonymous: false,
+    inputs: [
+      { name: "invoiceId", type: "uint256", indexed: true },
+      { name: "agent", type: "address", indexed: true },
+      { name: "merchant", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "PaymentRejected", anonymous: false,
+    inputs: [
+      { name: "invoiceId", type: "uint256", indexed: true },
+      { name: "agent", type: "address", indexed: true },
+      { name: "reason", type: "uint8", indexed: false },
     ],
   },
 ] as const;

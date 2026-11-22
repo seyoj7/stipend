@@ -29,6 +29,7 @@ function logDecision(decision: Decision) {
 
 const RUN_SIGNATURE_WINDOW_SECONDS = 60;
 const TRANSACTION_RECEIPT_TIMEOUT_MS = 120_000;
+const MAX_INVOICES_PER_RUN = 20;
 // This map only protects a single server instance; multi-instance deployments need a shared store.
 const usedRunSignatures = new Map<string, number>();
 let agentRunInProgress = false;
@@ -85,24 +86,8 @@ export async function runAgent(
 
   try {
   const { account, client: walletClient } = getAgentWalletClient();
-  const discoveredInvoices = await getOpenInvoices(account.address);
-  const approvals = new Map<string, boolean>();
-  const invoices: typeof discoveredInvoices = [];
-  for (const invoice of discoveredInvoices) {
-    const merchantKey = invoice.merchant.toLowerCase();
-    let allowed = approvals.get(merchantKey);
-    if (allowed === undefined) {
-      allowed = await publicClient.readContract({
-        address: STIPEND_ADDRESS,
-        abi: stipendAbi,
-        functionName: "allowedMerchant",
-        args: [account.address, invoice.merchant],
-      });
-      approvals.set(merchantKey, allowed);
-    }
-    if (allowed) invoices.push(invoice);
-    if (invoices.length === 20) break;
-  }
+  const invoices = (await getOpenInvoices(account.address)).slice(0, MAX_INVOICES_PER_RUN);
+
   const [policy, balance, paused, block] = await Promise.all([
     publicClient.readContract({
       address: STIPEND_ADDRESS,
@@ -162,14 +147,6 @@ export async function runAgent(
       continue;
     }
 
-    const currentInvoice = await publicClient.readContract({
-      address: STIPEND_ADDRESS,
-      abi: stipendAbi,
-      functionName: "invoices",
-      args: [invoice.id],
-    });
-    if (currentInvoice[3]) continue;
-
     try {
       const hash = await walletClient.writeContract({
         address: STIPEND_ADDRESS,
@@ -204,7 +181,7 @@ export async function runAgent(
           status: 504,
           body: {
             error: `Timed out waiting for invoice #${invoice.id} transaction confirmation.`,
-            agent: getAgentAccount().address,
+            agent: account.address,
             processed: decisions.length,
             decisions,
           },
@@ -225,7 +202,7 @@ export async function runAgent(
   return {
     status: 200,
     body: {
-      agent: getAgentAccount().address,
+      agent: account.address,
       processed: decisions.length,
       decisions,
     },
