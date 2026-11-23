@@ -95,6 +95,31 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <section className="landing-decisions" aria-labelledby="decisions-heading">
+        <div className="decisions-heading">
+          <div className="eyebrow">PAYMENT DECISIONS</div>
+          <h2 id="decisions-heading">Every invoice gets a clear outcome.</h2>
+          <p>
+            The contract checks the policy before any funds move. Eligible
+            invoices are paid; invoices that break a rule are rejected with a
+            reason you can inspect.
+          </p>
+        </div>
+        <div className="decision-outcomes">
+          <article className="decision-paid">
+            <div className="decision-topline"><span>01 / WITHIN POLICY</span><b>PAID</b></div>
+            <h3>Invoice settled</h3>
+            <p>Funds move from the vault directly to the approved merchant.</p>
+            <div className="decision-event">InvoicePaid <span>ON-CHAIN EVENT</span></div>
+          </article>
+          <article className="decision-blocked">
+            <div className="decision-topline"><span>02 / OUTSIDE POLICY</span><b>REJECTED</b></div>
+            <h3>Funds stay put</h3>
+            <p>A failed check stops payment and records the rejection reason.</p>
+            <div className="decision-event">PaymentRejected <span>WITH REASON</span></div>
+          </article>
+        </div>
+      </section>
       <section className="landing-bottom">
         <div>
           <div className="eyebrow">YOUR VAULT. YOUR RULES.</div>

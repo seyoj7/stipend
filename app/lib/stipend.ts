@@ -12,7 +12,7 @@ export const stipendAddress = getAddress(
   process.env.NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS ?? "0xa05f94c4D521e69771Dd6bF75aafDE08d431812e",
 );
 export const tusd8Address = getAddress("0x456569838f1d43009A91ebA4263147Afd7233483");
-export const stipendDeploymentBlock = 3_756_025n;
+export const stipendDeploymentBlock = 3_831_743n;
 
 export const stipendAbi = [
   { type: "function", name: "payer", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },

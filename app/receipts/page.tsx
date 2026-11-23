@@ -36,38 +36,48 @@ export default function ReceiptsPage() {
       const timestamps = new Map<bigint, number>();
       try {
         const latestBlock = await client.getBlockNumber();
+        const ranges: { fromBlock: bigint; toBlock: bigint }[] = [];
         for (let toBlock = latestBlock; toBlock >= stipendDeploymentBlock;) {
           const fromBlock = toBlock - 999n >= stipendDeploymentBlock ? toBlock - 999n : stipendDeploymentBlock;
-          const logs = await client.getLogs({
-            address: stipendAddress,
-            event: paidEvent,
-            args: { agent },
-            fromBlock,
-            toBlock,
-          });
-          const missingTimestamps = [...new Set(logs.map((log) => log.blockNumber).filter(
-            (blockNumber): blockNumber is bigint => blockNumber !== null && !timestamps.has(blockNumber),
-          ))];
-          await Promise.all(missingTimestamps.map(async (blockNumber) => {
-            const block = await client.getBlock({ blockNumber });
-            timestamps.set(blockNumber, Number(block.timestamp));
-          }));
-          const rows = [...logs].sort((left, right) => {
-            if (left.blockNumber !== right.blockNumber) return left.blockNumber! > right.blockNumber! ? -1 : 1;
-            return Number(right.logIndex ?? 0) - Number(left.logIndex ?? 0);
-          }).map((log) => ({
-            invoiceId: log.args.invoiceId!.toString(),
-            merchant: log.args.merchant!,
-            amount: log.args.amount!.toString(),
-            hash: log.transactionHash!,
-            timestamp: timestamps.get(log.blockNumber!) ?? 0,
-          }));
-          if (cancelled) return;
-          setReceipts((current) => [...current, ...rows]);
-          setState("scanning");
+          ranges.push({ fromBlock, toBlock });
           if (fromBlock === stipendDeploymentBlock) break;
           toBlock = fromBlock - 1n;
         }
+
+        setState("scanning");
+        let nextRange = 0;
+        const scanRange = async () => {
+          while (nextRange < ranges.length && !cancelled) {
+            const range = ranges[nextRange++];
+            const logs = await client.getLogs({
+              address: stipendAddress,
+              event: paidEvent,
+              args: { agent },
+              ...range,
+            });
+            const missingTimestamps = [...new Set(logs.map((log) => log.blockNumber).filter(
+              (blockNumber): blockNumber is bigint => blockNumber !== null && !timestamps.has(blockNumber),
+            ))];
+            await Promise.all(missingTimestamps.map(async (blockNumber) => {
+              const block = await client.getBlock({ blockNumber });
+              timestamps.set(blockNumber, Number(block.timestamp));
+            }));
+            if (cancelled) return;
+            const rows = [...logs].sort((left, right) => {
+              if (left.blockNumber !== right.blockNumber) return left.blockNumber! > right.blockNumber! ? -1 : 1;
+              return Number(right.logIndex ?? 0) - Number(left.logIndex ?? 0);
+            }).map((log) => ({
+              invoiceId: log.args.invoiceId!.toString(),
+              merchant: log.args.merchant!,
+              amount: log.args.amount!.toString(),
+              hash: log.transactionHash!,
+              timestamp: timestamps.get(log.blockNumber!) ?? 0,
+            }));
+            setReceipts((current) => [...current, ...rows].sort((left, right) => right.timestamp - left.timestamp));
+          }
+        };
+
+        await Promise.all(Array.from({ length: Math.min(4, ranges.length) }, () => scanRange()));
         if (!cancelled) setState("ready");
       } catch (cause) {
         if (!cancelled) {

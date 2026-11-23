@@ -4,6 +4,7 @@ import { getAgentOpenInvoices } from "@/backend/invoices";
 import { getAgentStatus } from "@/backend/status";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   const action = new URL(request.url).searchParams.get("action");

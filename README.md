@@ -85,7 +85,7 @@ The [`Stipend`](contract/contracts/stipend.sol) contract is a single-payer vault
 | `InvoiceAlreadyPaid`       | Invoice was already settled                   |
 | `InsufficientVaultBalance` | Vault does not hold enough tUSD8              |
 | `WrongAgent`               | Invoice is assigned to a different agent      |
-| `InvoiceNotFound`          | No invoice exists for the requested ID         |
+| `InvoiceNotFound`          | No invoice exists for the requested ID        |
 
 ### Contract tests
 
@@ -155,19 +155,32 @@ npm install
 
 ### Configure environment
 
-Copy the example file and fill in the values:
+For local development, copy the example file to `.env.local` and fill in the values:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-| Variable                               | Description                                          |
-| -------------------------------------- | ---------------------------------------------------- |
-| `AGENT_PRIVATE_KEY`                    | 0x-prefixed 32-byte private key for the agent wallet |
-| `AGENT_RUN_TOKEN`                      | Optional bearer token for headless/cron agent runs   |
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect project ID for the wallet modal        |
-| `STIPEND_CONTRACT_ADDRESS`             | Override for the deployed Stipend contract address   |
-| `NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS` | Same address, exposed to the client                  |
+For Vercel, add the same variables under **Project Settings → Environment Variables**. Set them for Production (and Preview if you deploy preview branches), then redeploy after changing them. `AGENT_PRIVATE_KEY` is required for the agent address and payment runner. Keep it server-only: do not prefix it with `NEXT_PUBLIC_`. A WalletConnect project ID is needed for wallet connections through WalletConnect.
+
+| Variable                               | Description                                                          |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| `AGENT_PRIVATE_KEY`                    | 0x-prefixed 32-byte private key for the agent wallet                 |
+| `AGENT_RUN_TOKEN`                      | Optional bearer token for headless/cron agent runs; keep server-only |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect project ID for the wallet modal                        |
+| `STIPEND_CONTRACT_ADDRESS`             | Contract address used by the server agent                            |
+| `NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS` | Same contract address, exposed to the client                         |
+
+Keep both contract address variables set to the same deployed address. The example defaults to the current Aevum Testnet deployment. Vercel should use Node.js 20.9 or newer. The agent route runs on Node.js and allows up to five minutes per invocation to wait for invoice transactions to confirm.
+
+### Deploy to Vercel
+
+1. Import the repository into Vercel as a Next.js project. Use the repository root as the project root; the contract subdirectory is not part of the web build.
+2. Add the environment variables above in Project Settings. Set `AGENT_PRIVATE_KEY` to the dedicated agent wallet key funded with Aevum test gas. Add a high-entropy `AGENT_RUN_TOKEN` only if you need bearer-token runs.
+3. Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` from WalletConnect Cloud, and set both contract address variables to the same deployed Stipend contract.
+4. Deploy with the default Next.js build settings (`npm run build`).
+
+`NEXT_PUBLIC_*` values are embedded into the client bundle at build time, so redeploy after changing them. Never commit `.env.local` or put a private key in a `NEXT_PUBLIC_*` variable.
 
 ### Run the app
 
@@ -176,17 +189,3 @@ npm run dev
 ```
 
 The app starts at `http://localhost:3000`. Connect a wallet on Aevum Testnet to interact with the vault.
-
-### Run contract tests
-
-```bash
-cd contract
-npx hardhat test
-```
-
-### Deploy the contract
-
-```bash
-cd contract
-npx hardhat ignition deploy ignition/modules/deploy.ts --network aevum
-```
