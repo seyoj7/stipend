@@ -26,7 +26,7 @@ There is no database. The blockchain is the source of truth.
 - **Agent.** A separate wallet whose key stays on the server. It can only pay invoices, and only inside the payer's rules. The funds stay in the vault, never in the agent wallet.
 - **Merchant.** Any wallet the payer has approved. Approved merchants can create invoices for the agent from their own wallet. Unapproved wallets are blocked, and the app shows "Your wallet is not an approved merchant for this agent."
 - **Other users.** If a different wallet connects, it can view the app, but it can't change the vault unless it is the payer. To try a second user, approve their wallet as a merchant.
-- **Current limit.** This version has one payer and one agent. One wallet acting as both payer and merchant works, but it pays itself. Multi-user vaults, where each wallet has its own vault, agents and rules, are planned as the next step.
+- **Current limit.** This version has one payer and one agent. Multi-user vaults, where each wallet has its own vault, agents and rules, are planned as the next step.
 
 ## Architecture
 
