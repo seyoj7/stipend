@@ -171,7 +171,7 @@ For Vercel, add the same variables under **Project Settings → Environment Vari
 | `STIPEND_CONTRACT_ADDRESS`             | Contract address used by the server agent                            |
 | `NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS` | Same contract address, exposed to the client                         |
 
-Keep both contract address variables set to the same deployed address. The example defaults to the current Aevum Testnet deployment. Vercel should use Node.js 20.9 or newer. The agent route runs on Node.js and allows up to five minutes per invocation to wait for invoice transactions to confirm.
+Keep both contract address variables set to the same deployed address. The example defaults to the current Aevum Testnet deployment. The agent route runs on Node.js and allows up to five minutes per invocation to wait for invoice transactions to confirm.
 
 ### Deploy to Vercel
 
@@ -181,6 +181,26 @@ Keep both contract address variables set to the same deployed address. The examp
 4. Deploy with the default Next.js build settings (`npm run build`).
 
 `NEXT_PUBLIC_*` values are embedded into the client bundle at build time, so redeploy after changing them. Never commit `.env.local` or put a private key in a `NEXT_PUBLIC_*` variable.
+
+## Run your own scheduler
+
+The run endpoint does not start a background job. A separate scheduler program calls `POST /api?action=run` on a timer and sends `Authorization: Bearer <AGENT_RUN_TOKEN>`. The standalone Python scheduler is in [`stipend-scheduler/`](stipend-scheduler/README.md); it can run continuously or be called once by cron or Windows Task Scheduler.
+
+Create a long random token and set it as `AGENT_RUN_TOKEN` in the app's server environment. For example, generate one with Python:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Put the same token in the scheduler's `.env` as `STIPEND_RUN_TOKEN`. Never put the token in the run URL, and never commit the `.env` file.
+
+### If the scheduler fails
+
+- Nothing is lost. Invoices stay open and unpaid on-chain, and the vault funds stay safe.
+- The next successful call picks up every open invoice.
+- Payments resume only while the policy has not expired, so set a long enough expiry.
+- Use the health endpoint (`GET /api?action=health`) or the Agent page warning to notice a stopped scheduler.
+- Use a long random run token, and never commit the `.env` file.
 
 ### Run the app
 

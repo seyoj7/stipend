@@ -29,7 +29,6 @@ function logDecision(decision: Decision) {
 
 const RUN_SIGNATURE_WINDOW_SECONDS = 60;
 const TRANSACTION_RECEIPT_TIMEOUT_MS = 120_000;
-const MAX_INVOICES_PER_RUN = 20;
 // This map only protects a single server instance; multi-instance deployments need a shared store.
 const usedRunSignatures = new Map<string, number>();
 let agentRunInProgress = false;
@@ -86,7 +85,7 @@ export async function runAgent(
 
   try {
   const { account, client: walletClient } = getAgentWalletClient();
-  const invoices = (await getOpenInvoices(account.address)).slice(0, MAX_INVOICES_PER_RUN);
+  const invoices = await getOpenInvoices(account.address);
 
   const [policy, balance, paused, block] = await Promise.all([
     publicClient.readContract({
@@ -178,9 +177,9 @@ export async function runAgent(
     } catch (error) {
       if (error instanceof Error && error.name === "WaitForTransactionReceiptTimeoutError") {
         return {
-          status: 504,
+          status: 500,
           body: {
-            error: `Timed out waiting for invoice #${invoice.id} transaction confirmation.`,
+            error: "Agent run failed while waiting for transaction confirmation.",
             agent: account.address,
             processed: decisions.length,
             decisions,
@@ -207,6 +206,12 @@ export async function runAgent(
       decisions,
     },
   };
+  } catch (error) {
+    console.error("[stipend-agent] Run failed", error);
+    return {
+      status: 500,
+      body: { error: "Agent run failed. Check the server logs." },
+    };
   } finally {
     agentRunInProgress = false;
   }
