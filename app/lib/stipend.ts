@@ -8,9 +8,12 @@ export const aevum = defineChain({
   blockExplorers: { default: { name: "Aevum Explorer", url: "https://explorer-test.qday.info" } },
 });
 
-export const stipendAddress = getAddress(
-  process.env.NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS ?? "0xD30686E7240F79b93ba89Fb81c0f52631D6E51fc",
-);
+const stipendContractAddress = process.env.NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS;
+if (!stipendContractAddress) {
+  throw new Error("NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS must be set to the deployed Stipend contract address.");
+}
+
+export const stipendAddress = getAddress(stipendContractAddress);
 export const tusd8Address = getAddress("0x456569838f1d43009A91ebA4263147Afd7233483");
 export const stipendDeploymentBlock = 4_084_750n;
 

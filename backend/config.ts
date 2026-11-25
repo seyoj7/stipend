@@ -3,9 +3,12 @@ import { timingSafeEqual } from "node:crypto";
 import { getAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-export const STIPEND_ADDRESS = getAddress(
-  process.env.STIPEND_CONTRACT_ADDRESS ?? "0xD30686E7240F79b93ba89Fb81c0f52631D6E51fc",
-);
+const stipendContractAddress = process.env.STIPEND_CONTRACT_ADDRESS;
+if (!stipendContractAddress) {
+  throw new Error("STIPEND_CONTRACT_ADDRESS must be set to the deployed Stipend contract address.");
+}
+
+export const STIPEND_ADDRESS = getAddress(stipendContractAddress);
 
 export function getAgentAccount() {
   const privateKey = process.env.AGENT_PRIVATE_KEY;

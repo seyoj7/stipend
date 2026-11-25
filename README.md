@@ -95,9 +95,9 @@ The [`Stipend`](contract/contracts/stipend.sol) contract is a single-payer vault
 | `/`          | Landing page — explains how Stipend works                                                                         |
 | `/dashboard` | Vault overview: balance, agent allowance, daily spend, quick stats                                                |
 | `/rules`     | Set spending policy (budget, cap, daily limit, expiry), manage the merchant allowlist, deposit and withdraw tUSD8 |
-| `/invoices`  | Create invoices, review open invoices, inspect blocked invoices, and close blocked invoices                        |
+| `/invoices`  | Create invoices, review open invoices, inspect blocked invoices, and close blocked invoices                       |
 | `/agent`     | Trigger an agent run — the payer signs a message to authorize the server-side agent to process open invoices      |
-| `/receipts`  | On-chain history of paid invoices and closed blocked invoices                                                      |
+| `/receipts`  | On-chain history of paid invoices and closed blocked invoices                                                     |
 
 ## Agent backend
 
@@ -144,8 +144,6 @@ For Vercel, add the same variables under **Project Settings → Environment Vari
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect project ID for the wallet modal                        |
 | `STIPEND_CONTRACT_ADDRESS`             | Contract address used by the server agent                            |
 | `NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS` | Same contract address, exposed to the client                         |
-
-Keep both contract address variables set to the same deployed address. The example defaults to the current Aevum Testnet deployment. The agent route runs on Node.js and allows up to five minutes per invocation to wait for invoice transactions to confirm.
 
 ### Deploy to Vercel
 
