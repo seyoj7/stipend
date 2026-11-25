@@ -29,6 +29,7 @@ export default function ReceiptsPage() {
       return () => { cancelled = true; };
     }
     const client = publicClient;
+    const agentAddress = agent;
 
     async function load() {
       setState("loading");
@@ -44,7 +45,7 @@ export default function ReceiptsPage() {
             address: stipendAddress,
             abi: stipendAbi,
             functionName: "getBlockedInvoices",
-            args: [agent, blockedOffset, 50n],
+            args: [agentAddress, blockedOffset, 50n],
           });
           blockedIds.push(...ids);
           blockedOffset += 50n;
@@ -74,7 +75,7 @@ export default function ReceiptsPage() {
           while (nextRange < ranges.length && !cancelled) {
             const range = ranges[nextRange++];
             const [paidLogs, closedLogs] = await Promise.all([
-              client.getLogs({ address: stipendAddress, event: paidEvent, args: { agent }, ...range }),
+              client.getLogs({ address: stipendAddress, event: paidEvent, args: { agent: agentAddress }, ...range }),
               client.getLogs({ address: stipendAddress, event: closedEvent, ...range }),
             ]);
             const relevantClosedLogs = closedLogs.filter((log) => closedIds.has(log.args.invoiceId!.toString()));
