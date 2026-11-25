@@ -98,27 +98,27 @@ export default function ReceiptsPage() {
               timestamp: timestamps.get(log.blockNumber!) ?? 0,
               status: "Paid",
             }));
-            const closedRows: Receipt[] = [...relevantClosedLogs].sort((left, right) => {
+            const closedRows: Receipt[] = await Promise.all([...relevantClosedLogs].sort((left, right) => {
               if (left.blockNumber !== right.blockNumber) return left.blockNumber! > right.blockNumber! ? -1 : 1;
               return Number(right.logIndex ?? 0) - Number(left.logIndex ?? 0);
-            }).map((log) => ({
-              invoiceId: log.args.invoiceId!.toString(),
-              merchant: "0x0000000000000000000000000000000000000000" as Address,
-              amount: "0",
-              hash: log.transactionHash!,
-              timestamp: timestamps.get(log.blockNumber!) ?? 0,
-              status: "Closed",
-            }));
-            const closedInvoiceDetails = await Promise.all(closedRows.map(async (row) => {
+            }).map(async (log) => {
+              const invoiceId = log.args.invoiceId!;
               const invoice = await client.readContract({
                 address: stipendAddress,
                 abi: stipendAbi,
                 functionName: "invoices",
-                args: [BigInt(row.invoiceId)],
+                args: [invoiceId],
               });
-              return { ...row, merchant: invoice[0], amount: invoice[2].toString() };
+              return {
+                invoiceId: invoiceId.toString(),
+                merchant: invoice[0],
+                amount: invoice[2].toString(),
+                hash: log.transactionHash!,
+                timestamp: timestamps.get(log.blockNumber!) ?? 0,
+                status: "Closed" as const,
+              };
             }));
-            const rows = [...paidRows, ...closedInvoiceDetails];
+            const rows = [...paidRows, ...closedRows];
             setReceipts((current) => [...current, ...rows].sort((left, right) => right.timestamp - left.timestamp));
           }
         };
