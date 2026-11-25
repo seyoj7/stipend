@@ -30,6 +30,8 @@ contract Stipend is ReentrancyGuard, Pausable {
         address agent;
         uint256 amount;
         bool paid;
+        bool closed;
+        bool blocked;
     }
 
     enum RejectionReason {
@@ -58,6 +60,7 @@ contract Stipend is ReentrancyGuard, Pausable {
     // --- Open invoice list per agent ---
     mapping(address => uint256[]) private _openInvoiceList;
     mapping(address => mapping(uint256 => uint256)) private _openInvoiceIndex;
+    mapping(address => uint256[]) private _blockedInvoiceList;
 
     event Deposited(address indexed payer, uint256 amount);
     event Withdrawn(address indexed payer, uint256 amount);
@@ -66,6 +69,7 @@ contract Stipend is ReentrancyGuard, Pausable {
     event MerchantRemoved(address indexed agent, address indexed merchant);
     event InvoiceCreated(uint256 indexed invoiceId, address indexed merchant, address indexed agent, uint256 amount);
     event InvoicePaid(uint256 indexed invoiceId, address indexed agent, address indexed merchant, uint256 amount);
+    event InvoiceClosed(uint256 indexed invoiceId, address indexed caller);
     event PaymentRejected(uint256 indexed invoiceId, address indexed agent, RejectionReason reason);
     event AgentRevoked(address indexed payer, address indexed agent);
     event AgentReinstated(address indexed payer, address indexed agent);
@@ -180,11 +184,25 @@ contract Stipend is ReentrancyGuard, Pausable {
         require(agent != address(0) && amount > 0, "Stipend: invalid invoice");
         require(allowedMerchant[agent][msg.sender], "Stipend: merchant not approved");
         invoiceId = nextInvoiceId++;
-        invoices[invoiceId] = Invoice({merchant: msg.sender, agent: agent, amount: amount, paid: false});
+        invoices[invoiceId] = Invoice({merchant: msg.sender, agent: agent, amount: amount, paid: false, closed: false, blocked: false});
         // Add to agent's open invoice list
         _openInvoiceList[agent].push(invoiceId);
         _openInvoiceIndex[agent][invoiceId] = _openInvoiceList[agent].length; // 1-based
         emit InvoiceCreated(invoiceId, msg.sender, agent, amount);
+    }
+
+    /// @notice Closes an unpaid invoice so it no longer appears in the agent's open list.
+    /// @dev Only the payer or the invoice's merchant may close it.
+    function closeInvoice(uint256 invoiceId) external {
+        Invoice storage invoice = invoices[invoiceId];
+        require(invoice.merchant != address(0), "Stipend: invoice not found");
+        require(msg.sender == payer || msg.sender == invoice.merchant, "Stipend: not authorized");
+        require(!invoice.paid, "Stipend: invoice already paid");
+        require(!invoice.closed, "Stipend: invoice already closed");
+        require(invoice.blocked, "Stipend: invoice is not blocked");
+        invoice.closed = true;
+        _removeOpenInvoice(invoice.agent, invoiceId);
+        emit InvoiceClosed(invoiceId, msg.sender);
     }
 
     /// @notice Only the invoice's designated agent can settle it. Failed policy checks emit
@@ -193,6 +211,13 @@ contract Stipend is ReentrancyGuard, Pausable {
         Invoice storage invoice = invoices[invoiceId];
         RejectionReason reason = _rejectionReason(invoiceId, invoice, msg.sender);
         if (reason != RejectionReason.None) {
+            if (
+                !invoice.blocked && invoice.merchant != address(0) &&
+                !invoice.paid && !invoice.closed && invoice.agent == msg.sender
+            ) {
+                invoice.blocked = true;
+                _blockedInvoiceList[invoice.agent].push(invoiceId);
+            }
             emit PaymentRejected(invoiceId, msg.sender, reason);
             return false;
         }
@@ -239,6 +264,18 @@ contract Stipend is ReentrancyGuard, Pausable {
         }
     }
 
+    /// @notice Returns a page of invoices that have had at least one rejected payment attempt.
+    function getBlockedInvoices(address agent, uint256 offset, uint256 limit)
+        external view returns (uint256[] memory ids, uint256 total)
+    {
+        total = _blockedInvoiceList[agent].length;
+        if (offset >= total || limit == 0) return (new uint256[](0), total);
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        ids = new uint256[](end - offset);
+        for (uint256 i = 0; i < ids.length; i++) ids[i] = _blockedInvoiceList[agent][offset + i];
+    }
+
     // --- Internal helpers ---
 
     function _removeOpenInvoice(address agent, uint256 invoiceId) private {
@@ -260,6 +297,7 @@ contract Stipend is ReentrancyGuard, Pausable {
         if (invoiceId == 0 || invoice.merchant == address(0)) return RejectionReason.InvoiceNotFound;
         if (invoice.agent != agent) return RejectionReason.WrongAgent;
         if (invoice.paid) return RejectionReason.InvoiceAlreadyPaid;
+        if (invoice.closed) return RejectionReason.InvoiceNotFound;
         Policy storage policy = policies[agent];
         if (policy.revoked) return RejectionReason.Revoked;
         if (block.timestamp > policy.expiry || policy.expiry == 0) return RejectionReason.Expired;

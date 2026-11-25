@@ -10,6 +10,8 @@ Stipend is a single-payer tUSD8 vault that gives an agent a bounded permission t
 
 The payer deposits tUSD8, sets an agent's total budget, per-payment cap, daily limit, and expiry, and approves merchants. An approved merchant calls `createInvoice(agent, amount)`. The contract records the caller as the invoice merchant and rejects the call unless `allowedMerchant[agent][msg.sender]` is true. The agent then calls `payInvoice(invoiceId)`. The contract checks the policy, merchant approval, invoice status, pause state, and vault balance before transferring funds.
 
+When `payInvoice` returns an on-chain policy rejection, the contract records the invoice in `getBlockedInvoices`. The app removes it from the open invoice queue and stops retrying it. If it should be permanently closed, the invoice's merchant or the payer can call `closeInvoice(invoiceId)`. Closing removes it from the contract's open list and prevents future payment. In the frontend, blocked invoices remain under **Blocked invoices** until closed; after closure they disappear from that section and appear in **Receipts** with a **Closed** status. The contract retains the invoice record and blocked ID for history.
+
 Rejected payment checks emit `PaymentRejected` with a `RejectionReason` and return `false`. A successful payment emits `InvoicePaid`. Daily spend is tracked by UTC day (`block.timestamp / 1 days`).
 
 ## Payer controls
@@ -47,7 +49,7 @@ All of these functions are restricted to the payer:
 
 ## Tests
 
-The Hardhat 3 `node:test` suite is in [`test/Stipend.ts`](test/Stipend.ts) and contains **45 test cases** covering payment checks, payer-only access, policy updates, agent reinstatement and spending reset, vault accounting, merchant changes, token edge cases, merchant list tracking (add/remove/re-add ordering, per-agent independence), and open invoice list tracking (creation, payment removal, pagination, per-agent scoping).
+The Hardhat 3 `node:test` suite is in [`test/Stipend.ts`](test/Stipend.ts) and covers payment checks, payer-only access, policy updates, agent reinstatement and spending reset, vault accounting, merchant changes, token edge cases, merchant list tracking, and open invoice tracking, including closing invoices.
 
 Run the suite from this directory:
 

@@ -21,6 +21,8 @@ export const stipendAbi = [
     outputs: [
       { name: "merchant", type: "address" }, { name: "agent", type: "address" },
       { name: "amount", type: "uint256" }, { name: "paid", type: "bool" },
+      { name: "closed", type: "bool" },
+      { name: "blocked", type: "bool" },
     ],
   },
   {
@@ -51,6 +53,10 @@ export const stipendAbi = [
     inputs: [], outputs: [{ name: "", type: "bool" }],
   },
   {
+    type: "function", name: "closeInvoice", stateMutability: "nonpayable",
+    inputs: [{ name: "invoiceId", type: "uint256" }], outputs: [],
+  },
+  {
     type: "function", name: "payInvoice", stateMutability: "nonpayable",
     inputs: [{ name: "invoiceId", type: "uint256" }], outputs: [{ name: "", type: "bool" }],
   },
@@ -64,6 +70,25 @@ export const stipendAbi = [
     outputs: [
       { name: "ids", type: "uint256[]" },
       { name: "total", type: "uint256" },
+    ],
+  },
+  {
+    type: "function", name: "getBlockedInvoices", stateMutability: "view",
+    inputs: [
+      { name: "agent", type: "address" },
+      { name: "offset", type: "uint256" },
+      { name: "limit", type: "uint256" },
+    ],
+    outputs: [
+      { name: "ids", type: "uint256[]" },
+      { name: "total", type: "uint256" },
+    ],
+  },
+  {
+    type: "event", name: "InvoiceClosed", anonymous: false,
+    inputs: [
+      { name: "invoiceId", type: "uint256", indexed: true },
+      { name: "caller", type: "address", indexed: true },
     ],
   },
   {

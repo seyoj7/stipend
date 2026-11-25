@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { runAgent } from "@/backend/agent";
-import { getAgentOpenInvoices } from "@/backend/invoices";
+import { getAgentBlockedInvoices, getAgentOpenInvoices } from "@/backend/invoices";
 import { setLastAgentRun } from "@/backend/run-status";
 import { getAgentHealth, getAgentStatus } from "@/backend/status";
 
@@ -55,6 +55,16 @@ export async function GET(request: Request) {
     } catch (error) {
       console.error("[stipend-agent] Invoice lookup failed", error);
       return NextResponse.json({ error: "Could not load open invoices." }, { status: 500 });
+    }
+  }
+
+  if (action === "blocked-invoices") {
+    try {
+      const invoices = await getAgentBlockedInvoices();
+      return NextResponse.json({ invoices }, { headers: { "Cache-Control": "no-store" } });
+    } catch (error) {
+      console.error("[stipend-agent] Blocked invoice lookup failed", error);
+      return NextResponse.json({ error: "Could not load blocked invoices." }, { status: 500 });
     }
   }
 

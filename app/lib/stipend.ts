@@ -9,10 +9,10 @@ export const aevum = defineChain({
 });
 
 export const stipendAddress = getAddress(
-  process.env.NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS ?? "0xa05f94c4D521e69771Dd6bF75aafDE08d431812e",
+  process.env.NEXT_PUBLIC_STIPEND_CONTRACT_ADDRESS ?? "0xD30686E7240F79b93ba89Fb81c0f52631D6E51fc",
 );
 export const tusd8Address = getAddress("0x456569838f1d43009A91ebA4263147Afd7233483");
-export const stipendDeploymentBlock = 3_831_743n;
+export const stipendDeploymentBlock = 4_084_750n;
 
 export const stipendAbi = [
   { type: "function", name: "payer", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
@@ -37,7 +37,10 @@ export const stipendAbi = [
   { type: "function", name: "pause", stateMutability: "nonpayable", inputs: [], outputs: [] },
   { type: "function", name: "unpause", stateMutability: "nonpayable", inputs: [], outputs: [] },
   { type: "function", name: "createInvoice", stateMutability: "nonpayable", inputs: [{ name: "agent", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ name: "invoiceId", type: "uint256" }] },
-  { type: "function", name: "invoices", stateMutability: "view", inputs: [{ name: "invoiceId", type: "uint256" }], outputs: [{ name: "merchant", type: "address" }, { name: "agent", type: "address" }, { name: "amount", type: "uint256" }, { name: "paid", type: "bool" }] },
+  { type: "function", name: "invoices", stateMutability: "view", inputs: [{ name: "invoiceId", type: "uint256" }], outputs: [{ name: "merchant", type: "address" }, { name: "agent", type: "address" }, { name: "amount", type: "uint256" }, { name: "paid", type: "bool" }, { name: "closed", type: "bool" }, { name: "blocked", type: "bool" }] },
+  { type: "function", name: "closeInvoice", stateMutability: "nonpayable", inputs: [{ name: "invoiceId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "getBlockedInvoices", stateMutability: "view", inputs: [{ name: "agent", type: "address" }, { name: "offset", type: "uint256" }, { name: "limit", type: "uint256" }], outputs: [{ name: "ids", type: "uint256[]" }, { name: "total", type: "uint256" }] },
+  { type: "event", name: "InvoiceClosed", anonymous: false, inputs: [{ name: "invoiceId", type: "uint256", indexed: true }, { name: "caller", type: "address", indexed: true }] },
   { type: "function", name: "nextInvoiceId", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "allowedMerchant", stateMutability: "view", inputs: [{ name: "agent", type: "address" }, { name: "merchant", type: "address" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "dailySpent", stateMutability: "view", inputs: [{ name: "agent", type: "address" }, { name: "day", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },

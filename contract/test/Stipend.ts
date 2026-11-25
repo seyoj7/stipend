@@ -551,4 +551,30 @@ describe("Stipend", () => {
     assert.equal(total, 1n);
     assert.equal(ids[0], id);
   });
+
+  it("lets the merchant close a blocked invoice and removes it from the open list", async () => {
+    const id = await invoice(6);
+    await assertRejected(id, 8);
+    await stipend.write.closeInvoice([id], { account: merchant.account });
+    const [ids, total] = await stipend.read.getOpenInvoices([agent.account.address, 0n, 100n]);
+    assert.equal(total, 0n);
+    assert.equal(ids.length, 0);
+    assert.equal((await stipend.read.invoices([id]))[4], true);
+  });
+
+  it("only allows closing blocked invoices and rejects other callers", async () => {
+    const id = await invoice(1);
+    await assert.rejects(
+      stipend.write.closeInvoice([id], { account: agent.account }),
+      /not authorized/i,
+    );
+    await assert.rejects(
+      stipend.write.closeInvoice([id], { account: payer.account }),
+      /not blocked/i,
+    );
+    await assertRejected(id, 8);
+    await stipend.write.closeInvoice([id], { account: payer.account });
+    const [, total] = await stipend.read.getOpenInvoices([agent.account.address, 0n, 100n]);
+    assert.equal(total, 0n);
+  });
 });

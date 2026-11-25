@@ -12,14 +12,17 @@ import { useTransaction } from "@/app/hooks/useTransaction";
 import { aevum, stipendAbi, stipendAddress } from "@/app/lib/stipend";
 
 type Invoice = { id: string; merchant: string; agent: string; amount: string; amountUsd: string };
+type BlockedInvoice = Invoice & { closed: boolean };
 
 export default function InvoicesPage() {
   const { address, chainId, isConnected } = useAccount();
   const { agent, error: agentError } = useAgentAddress();
   const tx = useTransaction();
   const { writeContractAsync } = useWriteContract();
+  const payer = useReadContract({ address: stipendAddress, abi: stipendAbi, functionName: "payer" });
   const merchantApproval = useReadContract({ address: stipendAddress, abi: stipendAbi, functionName: "allowedMerchant", args: [agent ?? "0x0000000000000000000000000000000000000000", address ?? "0x0000000000000000000000000000000000000000"], query: { enabled: Boolean(agent && address) } });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [blockedInvoices, setBlockedInvoices] = useState<BlockedInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [amount, setAmount] = useState("");
@@ -34,10 +37,15 @@ export default function InvoicesPage() {
     setLoading(true);
     setLoadError("");
     try {
-      const response = await fetch("/api?action=invoices", { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not load invoices.");
-      setInvoices(data.invoices as Invoice[]);
+      const [openResponse, blockedResponse] = await Promise.all([
+        fetch("/api?action=invoices", { cache: "no-store" }),
+        fetch("/api?action=blocked-invoices", { cache: "no-store" }),
+      ]);
+      const [openData, blockedData] = await Promise.all([openResponse.json(), blockedResponse.json()]);
+      if (!openResponse.ok) throw new Error(openData.error ?? "Could not load invoices.");
+      if (!blockedResponse.ok) throw new Error(blockedData.error ?? "Could not load blocked invoices.");
+      setInvoices(openData.invoices as Invoice[]);
+      setBlockedInvoices(blockedData.invoices as BlockedInvoice[]);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Could not load invoices.");
     } finally { setLoading(false); }
@@ -54,6 +62,27 @@ export default function InvoicesPage() {
       setAmount("");
       await refresh();
     } catch { /* Transaction feedback explains wallet and contract errors. */ }
+  }
+
+  async function closeBlockedInvoice(invoiceId: string) {
+    try {
+      await tx.execute(
+        () => writeContractAsync({
+          address: stipendAddress,
+          abi: stipendAbi,
+          functionName: "closeInvoice",
+          args: [BigInt(invoiceId)],
+        }),
+        "Blocked invoice closed and removed from open invoices.",
+      );
+      await refresh();
+    } catch { /* Transaction feedback reports rejected or failed close attempts. */ }
+  }
+
+  function canCloseInvoice(invoice: BlockedInvoice) {
+    if (!canWrite || !address || invoice.closed) return false;
+    const connected = address.toLowerCase();
+    return connected === invoice.merchant.toLowerCase() || connected === payer.data?.toLowerCase();
   }
 
   return (
@@ -75,6 +104,9 @@ export default function InvoicesPage() {
       </div>
       <section className="invoice-list-section"><div className="invoice-list-heading"><div><h2>Open invoices</h2><p>Invoices waiting for the agent to review.</p></div><div className="invoice-filters"><span className="selected">Open</span><button className="refresh-button" onClick={() => void refresh()} disabled={loading}>↻ Refresh</button></div></div>
         <div className="card invoice-table-card">{loadError ? <div className="danger-box">{loadError}</div> : loading ? <div className="empty-state">Reading open invoices from Aevum…</div> : invoices.length === 0 ? <div className="empty-state"><b>No open invoices</b><br />New merchant requests will appear here.</div> : <div className="table-wrap"><table className="data-table"><thead><tr><th>INVOICE</th><th>MERCHANT</th><th>AMOUNT</th><th>STATUS</th><th>RECIPIENT</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td><b className="invoice-id">#{invoice.id}</b><small>On-chain request</small></td><td><span className="invoice-merchant-cell">{invoice.merchant}</span></td><td><b>{invoice.amountUsd}</b><small>tUSD8</small></td><td><StatusPill tone="neutral">Open</StatusPill></td><td><span className="invoice-recipient">{invoice.agent.slice(0, 7)}…{invoice.agent.slice(-5)}</span></td></tr>)}</tbody></table></div>}</div>
+      </section>
+      <section className="invoice-list-section"><div className="invoice-list-heading"><div><h2>Blocked invoices</h2><p>Invoices with a rejected payment attempt that are still open. Closed invoices appear in Receipts.</p></div><span className="muted tiny">{blockedInvoices.length} open</span></div>
+        <div className="card invoice-table-card">{loadError ? <div className="danger-box">{loadError}</div> : loading ? <div className="empty-state">Reading blocked invoice history…</div> : blockedInvoices.length === 0 ? <div className="empty-state"><b>No blocked invoices</b><br />Rejected payment attempts will appear here.</div> : <div className="table-wrap"><table className="data-table"><thead><tr><th>INVOICE</th><th>MERCHANT</th><th>AMOUNT</th><th>STATUS</th><th>RECIPIENT</th><th>ACTION</th></tr></thead><tbody>{blockedInvoices.map((invoice) => <tr key={invoice.id}><td><b className="invoice-id">#{invoice.id}</b><small>Rejected payment</small></td><td><span className="invoice-merchant-cell">{invoice.merchant}</span></td><td><b>{invoice.amountUsd}</b><small>tUSD8</small></td><td><StatusPill tone={invoice.closed ? "neutral" : "warning"}>{invoice.closed ? "Closed" : "Blocked"}</StatusPill></td><td><span className="invoice-recipient">{invoice.agent.slice(0, 7)}…{invoice.agent.slice(-5)}</span></td><td>{invoice.closed ? <span className="muted tiny">Closed</span> : canCloseInvoice(invoice) ? <button className="button button-small button-danger" disabled={tx.status === "pending"} onClick={() => void closeBlockedInvoice(invoice.id)}>Close</button> : <span className="muted tiny" title="Connect as this invoice’s merchant or the payer on Aevum Testnet">—</span>}</td></tr>)}</tbody></table></div>}</div>
       </section>
     </div>
   );

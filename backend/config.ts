@@ -4,7 +4,7 @@ import { getAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 export const STIPEND_ADDRESS = getAddress(
-  process.env.STIPEND_CONTRACT_ADDRESS ?? "0xa05f94c4D521e69771Dd6bF75aafDE08d431812e",
+  process.env.STIPEND_CONTRACT_ADDRESS ?? "0xD30686E7240F79b93ba89Fb81c0f52631D6E51fc",
 );
 
 export function getAgentAccount() {

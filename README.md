@@ -55,7 +55,7 @@ flowchart LR
 
 | Item             | Value                                                                                                                              |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Stipend contract | [`0xa05f94c4D521e69771Dd6bF75aafDE08d431812e`](https://explorer-test.qday.info/address/0xa05f94c4D521e69771Dd6bF75aafDE08d431812e) |
+| Stipend contract | [`0xD30686E7240F79b93ba89Fb81c0f52631D6E51fc`](https://explorer-test.qday.info/address/0xD30686E7240F79b93ba89Fb81c0f52631D6E51fc) |
 | Network          | Aevum Testnet (chain 44005)                                                                                                        |
 | Explorer         | [explorer-test.qday.info](https://explorer-test.qday.info)                                                                         |
 
@@ -70,6 +70,7 @@ The [`Stipend`](contract/contracts/stipend.sol) contract is a single-payer vault
 - **Merchant allowlist** — a mapping of `(agent, merchant) → bool`. Only approved merchants can be paid.
 - **Invoice** — created by an approved merchant with `createInvoice(agent, amount)`. The caller is recorded as the merchant; the transaction reverts unless that caller is approved for the specified agent.
 - **Payment** — the agent calls `payInvoice(invoiceId)`. The contract runs through every rejection check before moving tokens.
+- **Blocked and closed invoices** — an on-chain policy rejection is recorded in blocked history and removed from the app's open invoice queue. The invoice's merchant or the payer can close it from `/invoices`. Closed invoices leave the blocked section and appear in `/receipts` with a **Closed** status; they cannot be paid.
 
 ### Rejection reasons
 
@@ -87,33 +88,6 @@ The [`Stipend`](contract/contracts/stipend.sol) contract is a single-payer vault
 | `WrongAgent`               | Invoice is assigned to a different agent      |
 | `InvoiceNotFound`          | No invoice exists for the requested ID        |
 
-### Contract tests
-
-The test suite ([`contract/test/Stipend.ts`](contract/test/Stipend.ts)) uses Hardhat 3's native `node:test` runner and covers:
-
-- Paying an approved invoice within all limits
-- Rejecting payments above the per-payment cap
-- Rejecting payments that exceed the total budget
-- Rejecting payments that exceed the daily limit
-- Rejecting payments after policy expiry
-- Rejecting invoices from unapproved merchants
-- Rejecting double-payment of the same invoice
-- Rejecting payments from a revoked agent
-- Blocking payments while the vault is paused
-- Rejecting payments when vault balance is insufficient
-- Rejecting payments from the wrong agent and for nonexistent invoice IDs
-- Preventing the agent from withdrawing vault funds
-- Preventing the agent from modifying its own policy
-- Restricting payer-only actions, including `reinstate`, `resetSpent`, and `sweepExcess`
-- Preserving `spent` and `revoked` when updating a policy
-- Resetting spent without changing revocation and reinstating a revoked agent
-- Sweeping only unaccounted excess tokens
-- Additional policy validation, vault accounting, merchant-removal, daily-reset, and fee-on-transfer token cases
-- Merchant list tracking: add, remove, re-add, swap-and-pop ordering, per-agent independence, and empty-list edge case
-- Open invoice list tracking: creation adds to list, payment removes, pagination, offset past total, per-agent scoping, and rejected payments keeping invoices in list
-
-The suite contains **45 test cases** in [`contract/test/Stipend.ts`](contract/test/Stipend.ts).
-
 ## Frontend pages
 
 | Route        | Purpose                                                                                                           |
@@ -121,18 +95,18 @@ The suite contains **45 test cases** in [`contract/test/Stipend.ts`](contract/te
 | `/`          | Landing page — explains how Stipend works                                                                         |
 | `/dashboard` | Vault overview: balance, agent allowance, daily spend, quick stats                                                |
 | `/rules`     | Set spending policy (budget, cap, daily limit, expiry), manage the merchant allowlist, deposit and withdraw tUSD8 |
-| `/invoices`  | Create new invoices (as a merchant) and view open invoices awaiting agent review                                  |
+| `/invoices`  | Create invoices, review open invoices, inspect blocked invoices, and close blocked invoices                        |
 | `/agent`     | Trigger an agent run — the payer signs a message to authorize the server-side agent to process open invoices      |
-| `/receipts`  | On-chain payment history pulled from `InvoicePaid` event logs                                                     |
+| `/receipts`  | On-chain history of paid invoices and closed blocked invoices                                                      |
 
 ## Agent backend
 
 The server-side agent ([`backend/agent.ts`](backend/agent.ts)) runs when triggered from the `/agent` page or via a bearer-token API call. It:
 
 1. **Authenticates** — either by verifying a payer-signed message (from the UI) or a bearer token (`AGENT_RUN_TOKEN`).
-2. **Reads open invoices** — iterates through all invoices on the contract and filters for unpaid ones assigned to the agent.
+2. **Reads open invoices** — loads unpaid invoices assigned to the agent and skips invoices already recorded as blocked.
 3. **Checks every policy rule client-side first** — vault paused, agent revoked, expiry, merchant allowlist, per-payment cap, total budget, daily limit, and vault balance.
-4. **Submits `payInvoice`** — for each eligible invoice, using the agent's private key.
+4. **Submits `payInvoice`** — uses the agent's private key for eligible invoices and for policy-blocked attempts so the contract can record the rejection.
 5. **Logs and returns a decision array** — each invoice gets a `paid`, `blocked`, `rejected`, or `error` result with a reason.
 
 ## Getting started

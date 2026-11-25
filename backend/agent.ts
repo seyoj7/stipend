@@ -133,19 +133,6 @@ export async function runAgent(
     else if (invoice.amount > balance - spentThisRun)
       reason = "insufficient_vault_balance";
 
-    if (reason) {
-      const result: Decision = {
-        invoiceId: invoice.id.toString(),
-        merchant: invoice.merchant,
-        amount: invoice.amount.toString(),
-        decision: "blocked",
-        reason,
-      };
-      logDecision(result);
-      decisions.push(result);
-      continue;
-    }
-
     try {
       const hash = await walletClient.writeContract({
         address: STIPEND_ADDRESS,
@@ -163,12 +150,13 @@ export async function runAgent(
         strict: false,
       });
       const paid = events.some((event) => event.eventName === "InvoicePaid");
+      const rejected = events.some((event) => event.eventName === "PaymentRejected");
       const result: Decision = {
         invoiceId: invoice.id.toString(),
         merchant: invoice.merchant,
         amount: invoice.amount.toString(),
-        decision: paid ? "paid" : "rejected",
-        reason: paid ? undefined : "contract_rejected_payment",
+        decision: paid ? "paid" : rejected ? "blocked" : "rejected",
+        reason: paid ? undefined : reason ?? "contract_rejected_payment",
         transactionHash: hash,
       };
       logDecision(result);
@@ -190,7 +178,7 @@ export async function runAgent(
         invoiceId: invoice.id.toString(),
         merchant: invoice.merchant,
         amount: invoice.amount.toString(),
-        decision: "error",
+        decision: reason ? "blocked" : "error",
         reason: error instanceof Error ? error.message : "unknown_error",
       };
       logDecision(result);
